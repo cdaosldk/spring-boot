@@ -1344,7 +1344,7 @@ bom {
 			releaseNotes("https://github.com/apache/maven-assembly-plugin/releases/tag/maven-assembly-plugin-{version}")
 		}
 	}
-	library("Maven Clean Plugin", "3.4.0") {
+	library("Maven Clean Plugin", "3.4.1") {
 		prohibit {
 			contains "-beta-"
 			because "we don't want betas"
@@ -2174,7 +2174,7 @@ bom {
 			]
 		}
 	}
-	library("Spring AMQP", "3.2.3-SNAPSHOT") {
+	library("Spring AMQP", "3.2.3") {
 		considerSnapshots()
 		group("org.springframework.amqp") {
 			imports = [
@@ -2191,7 +2191,7 @@ bom {
 			releaseNotes("https://github.com/spring-projects/spring-amqp/releases/tag/v{version}")
 		}
 	}
-	library("Spring Authorization Server", "1.4.2-SNAPSHOT") {
+	library("Spring Authorization Server", "1.4.2") {
 		considerSnapshots()
 		group("org.springframework.security") {
 			modules = [
@@ -2306,7 +2306,7 @@ bom {
 			releaseNotes("https://github.com/spring-projects/spring-hateoas/releases/tag/{version}")
 		}
 	}
-	library("Spring Integration", "6.5.0-SNAPSHOT") {
+	library("Spring Integration", "6.5.0-M2") {
 		considerSnapshots()
 		group("org.springframework.integration") {
 			imports = [
@@ -2323,7 +2323,7 @@ bom {
 			releaseNotes("https://github.com/spring-projects/spring-integration/releases/tag/v{version}")
 		}
 	}
-	library("Spring Kafka", "3.3.3-SNAPSHOT") {
+	library("Spring Kafka", "3.3.3") {
 		considerSnapshots()
 		group("org.springframework.kafka") {
 			modules = [
@@ -2467,7 +2467,7 @@ bom {
 			releaseNotes("https://github.com/spring-projects/spring-ws/releases/tag/v{version}")
 		}
 	}
-	library("SQLite JDBC", "3.49.0.0") {
+	library("SQLite JDBC", "3.49.1.0") {
 		group("org.xerial") {
 			modules = [
 				"sqlite-jdbc"
