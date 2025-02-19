@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2024 the original author or authors.
+ * Copyright 2012-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,9 +29,11 @@ import java.util.function.Consumer;
 import javax.sql.DataSource;
 
 import com.zaxxer.hikari.HikariDataSource;
+import liquibase.Liquibase;
 import liquibase.UpdateSummaryEnum;
 import liquibase.UpdateSummaryOutputEnum;
 import liquibase.command.core.helpers.ShowSummaryArgument;
+import liquibase.integration.spring.Customizer;
 import liquibase.integration.spring.SpringLiquibase;
 import liquibase.ui.UIServiceEnum;
 import org.junit.jupiter.api.Test;
@@ -83,6 +85,7 @@ import static org.assertj.core.api.Assertions.contentOf;
  * @author Evgeniy Cheban
  * @author Moritz Halbritter
  * @author Phillip Webb
+ * @author Ahmed Ashour
  */
 @ExtendWith(OutputCaptureExtension.class)
 class LiquibaseAutoConfigurationTests {
@@ -235,7 +238,7 @@ class LiquibaseAutoConfigurationTests {
 	void overrideContexts() {
 		this.contextRunner.withUserConfiguration(EmbeddedDataSourceConfiguration.class)
 			.withPropertyValues("spring.liquibase.contexts:test, production")
-			.run(assertLiquibase((liquibase) -> assertThat(liquibase.getContexts()).isEqualTo("test, production")));
+			.run(assertLiquibase((liquibase) -> assertThat(liquibase.getContexts()).isEqualTo("test,production")));
 	}
 
 	@Test
@@ -388,7 +391,7 @@ class LiquibaseAutoConfigurationTests {
 	void overrideLabelFilter() {
 		this.contextRunner.withUserConfiguration(EmbeddedDataSourceConfiguration.class)
 			.withPropertyValues("spring.liquibase.label-filter:test, production")
-			.run(assertLiquibase((liquibase) -> assertThat(liquibase.getLabelFilter()).isEqualTo("test, production")));
+			.run(assertLiquibase((liquibase) -> assertThat(liquibase.getLabelFilter()).isEqualTo("test,production")));
 	}
 
 	@Test
@@ -532,6 +535,30 @@ class LiquibaseAutoConfigurationTests {
 		assertThat(RuntimeHintsPredicates.resource().forResource("db/changelog/tables/init.sql")).accepts(hints);
 	}
 
+	@Test
+	void whenCustomizerBeanIsDefinedThenItIsConfiguredOnSpringLiquibase() {
+		this.contextRunner.withUserConfiguration(EmbeddedDataSourceConfiguration.class, CustomizerConfiguration.class)
+			.run(assertLiquibase((liquibase) -> assertThat(liquibase.getCustomizer()).isNotNull()));
+	}
+
+	@Test
+	void whenAnalyticsEnabledIsFalseThenSpringLiquibaseHasAnalyticsDisabled() {
+		this.contextRunner.withUserConfiguration(EmbeddedDataSourceConfiguration.class)
+			.withPropertyValues("spring.liquibase.analytics-enabled=false")
+			.run((context) -> assertThat(context.getBean(SpringLiquibase.class))
+				.extracting(SpringLiquibase::getAnalyticsEnabled)
+				.isEqualTo(Boolean.FALSE));
+	}
+
+	@Test
+	void whenLicenseKeyIsSetThenSpringLiquibaseHasLicenseKey() {
+		this.contextRunner.withUserConfiguration(EmbeddedDataSourceConfiguration.class)
+			.withPropertyValues("spring.liquibase.license-key=a1b2c3d4")
+			.run((context) -> assertThat(context.getBean(SpringLiquibase.class))
+				.extracting(SpringLiquibase::getLicenseKey)
+				.isEqualTo("a1b2c3d4"));
+	}
+
 	private ContextConsumer<AssertableApplicationContext> assertLiquibase(Consumer<SpringLiquibase> consumer) {
 		return (context) -> {
 			assertThat(context).hasSingleBean(SpringLiquibase.class);
@@ -664,6 +691,16 @@ class LiquibaseAutoConfigurationTests {
 				}
 
 			};
+		}
+
+	}
+
+	@Configuration(proxyBeanMethods = false)
+	static class CustomizerConfiguration {
+
+		@Bean
+		Customizer<Liquibase> customizer() {
+			return (liquibase) -> liquibase.setChangeLogParameter("some key", "some value");
 		}
 
 	}

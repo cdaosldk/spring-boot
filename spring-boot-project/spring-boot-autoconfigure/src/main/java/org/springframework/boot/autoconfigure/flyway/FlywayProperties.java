@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2024 the original author or authors.
+ * Copyright 2012-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -40,7 +40,7 @@ import org.springframework.boot.convert.DurationUnit;
  * @author Chris Bono
  * @since 1.1.0
  */
-@ConfigurationProperties(prefix = "spring.flyway")
+@ConfigurationProperties("spring.flyway")
 public class FlywayProperties {
 
 	/**
@@ -319,8 +319,8 @@ public class FlywayProperties {
 	private Boolean skipExecutingMigrations;
 
 	/**
-	 * Ignore migrations that match this comma-separated list of patterns when validating
-	 * migrations. Requires Flyway Teams.
+	 * List of patterns that identify migrations to ignore when performing validation.
+	 * Requires Flyway Teams.
 	 */
 	private List<String> ignoreMigrationPatterns;
 
@@ -329,6 +329,11 @@ public class FlywayProperties {
 	 * Flyway Teams.
 	 */
 	private Boolean detectEncoding;
+
+	/**
+	 * Whether to enable community database support.
+	 */
+	private Boolean communityDbSupportEnabled;
 
 	private final Oracle oracle = new Oracle();
 
@@ -592,10 +597,13 @@ public class FlywayProperties {
 		this.cleanDisabled = cleanDisabled;
 	}
 
+	@Deprecated(since = "3.4.0", forRemoval = true)
+	@DeprecatedConfigurationProperty(since = "3.4.0", reason = "Deprecated in Flyway 10.18 and removed in Flyway 11.0")
 	public boolean isCleanOnValidationError() {
 		return this.cleanOnValidationError;
 	}
 
+	@Deprecated(since = "3.4.0", forRemoval = true)
 	public void setCleanOnValidationError(boolean cleanOnValidationError) {
 		this.cleanOnValidationError = cleanOnValidationError;
 	}
@@ -821,6 +829,14 @@ public class FlywayProperties {
 
 	public void setDetectEncoding(final Boolean detectEncoding) {
 		this.detectEncoding = detectEncoding;
+	}
+
+	public Boolean getCommunityDbSupportEnabled() {
+		return this.communityDbSupportEnabled;
+	}
+
+	public void setCommunityDbSupportEnabled(Boolean communityDbSupportEnabled) {
+		this.communityDbSupportEnabled = communityDbSupportEnabled;
 	}
 
 	public Oracle getOracle() {

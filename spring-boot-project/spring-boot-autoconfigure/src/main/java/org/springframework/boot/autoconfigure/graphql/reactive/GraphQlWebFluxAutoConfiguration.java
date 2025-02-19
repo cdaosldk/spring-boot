@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2024 the original author or authors.
+ * Copyright 2012-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -55,6 +55,7 @@ import org.springframework.graphql.server.webflux.SchemaHandler;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.codec.ServerCodecConfigurer;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.reactive.HandlerMapping;
@@ -112,6 +113,7 @@ public class GraphQlWebFluxAutoConfiguration {
 		RouterFunctions.Builder builder = RouterFunctions.route();
 		builder.route(GraphQlRequestPredicates.graphQlHttp(path), httpHandler::handleRequest);
 		builder.route(GraphQlRequestPredicates.graphQlSse(path), sseHandler::handleRequest);
+		builder.POST(path, this::unsupportedMediaType);
 		builder.GET(path, this::onlyAllowPost);
 		if (properties.getGraphiql().isEnabled()) {
 			GraphiQlHandler graphQlHandler = new GraphiQlHandler(path, properties.getWebsocket().getPath());
@@ -122,6 +124,14 @@ public class GraphQlWebFluxAutoConfiguration {
 			builder.GET(path + "/schema", schemaHandler::handleRequest);
 		}
 		return builder.build();
+	}
+
+	private Mono<ServerResponse> unsupportedMediaType(ServerRequest request) {
+		return ServerResponse.status(HttpStatus.UNSUPPORTED_MEDIA_TYPE).headers(this::acceptJson).build();
+	}
+
+	private void acceptJson(HttpHeaders headers) {
+		headers.setAccept(Collections.singletonList(MediaType.APPLICATION_JSON));
 	}
 
 	private Mono<ServerResponse> onlyAllowPost(ServerRequest request) {
@@ -155,7 +165,7 @@ public class GraphQlWebFluxAutoConfiguration {
 	}
 
 	@Configuration(proxyBeanMethods = false)
-	@ConditionalOnProperty(prefix = "spring.graphql.websocket", name = "path")
+	@ConditionalOnProperty("spring.graphql.websocket.path")
 	public static class WebSocketConfiguration {
 
 		@Bean

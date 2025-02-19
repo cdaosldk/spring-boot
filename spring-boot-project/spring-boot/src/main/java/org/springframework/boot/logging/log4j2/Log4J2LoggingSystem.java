@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2024 the original author or authors.
+ * Copyright 2012-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -47,6 +47,7 @@ import org.apache.logging.log4j.core.net.ssl.SslConfigurationFactory;
 import org.apache.logging.log4j.core.util.AuthorizationProvider;
 import org.apache.logging.log4j.core.util.NameUtil;
 import org.apache.logging.log4j.jul.Log4jBridgeHandler;
+import org.apache.logging.log4j.status.StatusLogger;
 import org.apache.logging.log4j.util.PropertiesUtil;
 
 import org.springframework.boot.context.properties.bind.BindResult;
@@ -82,8 +83,6 @@ import org.springframework.util.StringUtils;
  * @since 1.2.0
  */
 public class Log4J2LoggingSystem extends AbstractLoggingSystem {
-
-	private static final String FILE_PROTOCOL = "file";
 
 	private static final String LOG4J_BRIDGE_HANDLER = "org.apache.logging.log4j.jul.Log4jBridgeHandler";
 
@@ -215,6 +214,7 @@ public class Log4J2LoggingSystem extends AbstractLoggingSystem {
 		if (isAlreadyInitialized(loggerContext)) {
 			return;
 		}
+		resetFallbackListenerStream(StatusLogger.getLogger());
 		Environment environment = initializationContext.getEnvironment();
 		if (environment != null) {
 			getLoggerContext().putObject(ENVIRONMENT_KEY, environment);
@@ -224,6 +224,21 @@ public class Log4J2LoggingSystem extends AbstractLoggingSystem {
 		loggerContext.getConfiguration().removeFilter(FILTER);
 		super.initialize(initializationContext, configLocation, logFile);
 		markAsInitialized(loggerContext);
+	}
+
+	/**
+	 * Reset the stream used by the fallback listener to the current system out. This
+	 * allows the fallback listener to work with any captured output streams in a similar
+	 * way to the {@code follow} attribute of the {@code Console} appender.
+	 * @param statusLogger the status logger to update
+	 */
+	private void resetFallbackListenerStream(StatusLogger statusLogger) {
+		try {
+			statusLogger.getFallbackListener().setStream(System.out);
+		}
+		catch (NoSuchMethodError ex) {
+			// Ignore for older versions of Log4J
+		}
 	}
 
 	@Override
@@ -240,9 +255,7 @@ public class Log4J2LoggingSystem extends AbstractLoggingSystem {
 
 	private void load(LoggingInitializationContext initializationContext, String location, LogFile logFile) {
 		List<String> overrides = getOverrides(initializationContext);
-		if (initializationContext != null) {
-			applySystemProperties(initializationContext.getEnvironment(), logFile);
-		}
+		applySystemProperties(initializationContext.getEnvironment(), logFile);
 		loadConfiguration(location, logFile, overrides);
 	}
 
@@ -261,7 +274,7 @@ public class Log4J2LoggingSystem extends AbstractLoggingSystem {
 	 * @since 2.6.0
 	 */
 	protected void loadConfiguration(String location, LogFile logFile, List<String> overrides) {
-		Assert.notNull(location, "Location must not be null");
+		Assert.notNull(location, "'location' must not be null");
 		try {
 			List<Configuration> configurations = new ArrayList<>();
 			LoggerContext context = getLoggerContext();
@@ -279,7 +292,7 @@ public class Log4J2LoggingSystem extends AbstractLoggingSystem {
 	}
 
 	private Configuration load(String location, LoggerContext context) throws IOException {
-		Resource resource = new ApplicationResourceLoader().getResource(location);
+		Resource resource = ApplicationResourceLoader.get().getResource(location);
 		ConfigurationSource source = getConfigurationSource(resource);
 		return ConfigurationFactory.getInstance().getConfiguration(context, source);
 	}

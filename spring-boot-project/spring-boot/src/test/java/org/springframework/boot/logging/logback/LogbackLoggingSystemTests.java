@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2024 the original author or authors.
+ * Copyright 2012-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,12 +17,9 @@
 package org.springframework.boot.logging.logback;
 
 import java.io.File;
-import java.lang.reflect.Field;
-import java.lang.reflect.Modifier;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
-import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
@@ -30,15 +27,24 @@ import java.util.Map;
 import java.util.Set;
 import java.util.logging.Handler;
 import java.util.logging.LogManager;
+import java.util.stream.Stream;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.LoggerContext;
+import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.classic.spi.LoggerContextListener;
+import ch.qos.logback.core.AppenderBase;
 import ch.qos.logback.core.ConsoleAppender;
 import ch.qos.logback.core.encoder.LayoutWrappingEncoder;
+import ch.qos.logback.core.joran.spi.JoranException;
 import ch.qos.logback.core.rolling.RollingFileAppender;
 import ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy;
+import ch.qos.logback.core.status.ErrorStatus;
+import ch.qos.logback.core.status.InfoStatus;
+import ch.qos.logback.core.status.OnConsoleStatusListener;
+import ch.qos.logback.core.status.StatusManager;
+import ch.qos.logback.core.status.WarnStatus;
 import ch.qos.logback.core.util.DynamicClassLoadingException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -66,10 +72,10 @@ import org.springframework.boot.testsupport.system.OutputCaptureExtension;
 import org.springframework.core.convert.ConversionService;
 import org.springframework.core.convert.support.ConfigurableConversionService;
 import org.springframework.core.env.ConfigurableEnvironment;
+import org.springframework.core.env.Environment;
 import org.springframework.core.env.MapPropertySource;
 import org.springframework.mock.env.MockEnvironment;
 import org.springframework.test.util.ReflectionTestUtils;
-import org.springframework.util.ReflectionUtils;
 import org.springframework.util.StringUtils;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -128,6 +134,22 @@ class LogbackLoggingSystemTests extends AbstractLoggingSystemTests {
 		System.getProperties().keySet().retainAll(this.systemPropertyNames);
 		this.loggingSystem.cleanUp();
 		((LoggerContext) LoggerFactory.getILoggerFactory()).stop();
+	}
+
+	@Test
+	void logbackDefaultsConfigurationDoesNotTriggerDeprecation(CapturedOutput output) {
+		initialize(this.initializationContext, "classpath:logback-include-defaults.xml", null);
+		this.logger.info("Hello world");
+		assertThat(getLineWithText(output, "Hello world")).isEqualTo("[INFO] - Hello world");
+		assertThat(output.toString()).doesNotContain("WARN").doesNotContain("deprecated");
+	}
+
+	@Test
+	void logbackBaseConfigurationDoesNotTriggerDeprecation(CapturedOutput output) {
+		initialize(this.initializationContext, "classpath:logback-include-base.xml", null);
+		this.logger.info("Hello world");
+		assertThat(getLineWithText(output, "Hello world")).contains(" INFO ").endsWith(": Hello world");
+		assertThat(output.toString()).doesNotContain("WARN").doesNotContain("deprecated");
 	}
 
 	@Test
@@ -272,6 +294,7 @@ class LogbackLoggingSystemTests extends AbstractLoggingSystemTests {
 	}
 
 	@Test
+	@Deprecated(since = "3.3.5", forRemoval = true)
 	void getLoggerConfigurationForALL() {
 		this.loggingSystem.beforeInitialize();
 		initialize(this.initializationContext, null, null);
@@ -550,18 +573,19 @@ class LogbackLoggingSystemTests extends AbstractLoggingSystemTests {
 		LoggerContext loggerContext = (LoggerContext) LoggerFactory.getILoggerFactory();
 		Map<String, String> properties = loggerContext.getCopyOfPropertyMap();
 		Set<String> expectedProperties = new HashSet<>();
-		ReflectionUtils.doWithFields(LogbackLoggingSystemProperties.class,
-				(field) -> expectedProperties.add((String) field.get(null)), this::isPublicStaticFinal);
-		expectedProperties.removeAll(Arrays.asList("LOG_FILE", "LOG_PATH"));
+		Stream.of(RollingPolicySystemProperty.values())
+			.map(RollingPolicySystemProperty::getEnvironmentVariableName)
+			.forEach(expectedProperties::add);
+		Stream.of(LoggingSystemProperty.values())
+			.map(LoggingSystemProperty::getEnvironmentVariableName)
+			.forEach(expectedProperties::add);
+		expectedProperties.removeAll(List.of("LOG_FILE", "LOG_PATH"));
 		expectedProperties.add("org.jboss.logging.provider");
 		expectedProperties.add("LOG_CORRELATION_PATTERN");
+		expectedProperties.add("CONSOLE_LOG_STRUCTURED_FORMAT");
+		expectedProperties.add("FILE_LOG_STRUCTURED_FORMAT");
 		assertThat(properties).containsOnlyKeys(expectedProperties);
 		assertThat(properties).containsEntry("CONSOLE_LOG_CHARSET", Charset.defaultCharset().name());
-	}
-
-	private boolean isPublicStaticFinal(Field field) {
-		int modifiers = field.getModifiers();
-		return Modifier.isPublic(modifiers) && Modifier.isStatic(modifiers) && Modifier.isFinal(modifiers);
 	}
 
 	@Test
@@ -626,16 +650,107 @@ class LogbackLoggingSystemTests extends AbstractLoggingSystemTests {
 		System.setProperty("logback.debug", "true");
 		try {
 			this.loggingSystem.beforeInitialize();
+			LoggerContext loggerContext = this.logger.getLoggerContext();
+			StatusManager statusManager = loggerContext.getStatusManager();
+			statusManager.add(new InfoStatus("INFO STATUS MESSAGE", getClass()));
+			statusManager.add(new WarnStatus("WARN STATUS MESSAGE", getClass()));
+			statusManager.add(new ErrorStatus("ERROR STATUS MESSAGE", getClass()));
 			File file = new File(tmpDir(), "logback-test.log");
 			LogFile logFile = getLogFile(file.getPath(), null);
 			initialize(this.initializationContext, null, logFile);
 			assertThat(output).contains("LevelChangePropagator")
-				.contains("SizeAndTimeBasedFNATP")
-				.contains("DebugLogbackConfigurator");
+				.contains("SizeAndTimeBasedFileNamingAndTriggeringPolicy")
+				.contains("DebugLogbackConfigurator")
+				.contains("INFO STATUS MESSAGE")
+				.contains("WARN STATUS MESSAGE")
+				.contains("ERROR STATUS MESSAGE");
+			assertThat(loggerContext.getStatusManager().getCopyOfStatusListenerList()).allSatisfy((listener) -> {
+				assertThat(listener).isInstanceOf(SystemStatusListener.class);
+				assertThat(listener).hasFieldOrPropertyWithValue("debug", true);
+			});
 		}
 		finally {
 			System.clearProperty("logback.debug");
 		}
+	}
+
+	@Test
+	void logbackSystemStatusListenerShouldBeRegisteredWhenCustomLogbackXmlHasStatusListener(CapturedOutput output) {
+		this.loggingSystem.beforeInitialize();
+		initialize(this.initializationContext, "classpath:logback-include-status-listener.xml", null);
+		LoggerContext loggerContext = this.logger.getLoggerContext();
+		assertThat(loggerContext.getStatusManager().getCopyOfStatusListenerList()).hasSize(2)
+			.allSatisfy((listener) -> assertThat(listener).isInstanceOf(OnConsoleStatusListener.class))
+			.anySatisfy((listener) -> assertThat(listener).isInstanceOf(SystemStatusListener.class));
+		this.logger.info("Hello world");
+		assertThat(output).contains("Hello world");
+	}
+
+	@Test
+	void logbackSystemStatusListenerShouldBeRegistered(CapturedOutput output) {
+		this.loggingSystem.beforeInitialize();
+		initialize(this.initializationContext, null, getLogFile(tmpDir() + "/tmp.log", null));
+		LoggerContext loggerContext = this.logger.getLoggerContext();
+		assertThat(loggerContext.getStatusManager().getCopyOfStatusListenerList()).allSatisfy((listener) -> {
+			assertThat(listener).isInstanceOf(SystemStatusListener.class);
+			assertThat(listener).hasFieldOrPropertyWithValue("debug", false);
+		});
+		AlwaysFailAppender appender = new AlwaysFailAppender();
+		appender.setContext(loggerContext);
+		appender.start();
+		this.logger.addAppender(appender);
+		this.logger.info("Hello world");
+		assertThat(output).contains("Always Fail Appender").contains("Hello world");
+	}
+
+	@Test
+	void logbackSystemStatusListenerShouldBeRegisteredOnlyOnce() {
+		this.loggingSystem.beforeInitialize();
+		initialize(this.initializationContext, null, getLogFile(tmpDir() + "/tmp.log", null));
+		LoggerContext loggerContext = this.logger.getLoggerContext();
+		SystemStatusListener.addTo(loggerContext);
+		SystemStatusListener.addTo(loggerContext, true);
+		assertThat(loggerContext.getStatusManager().getCopyOfStatusListenerList()).satisfiesOnlyOnce((listener) -> {
+			assertThat(listener).isInstanceOf(SystemStatusListener.class);
+			assertThat(listener).hasFieldOrPropertyWithValue("debug", false);
+		});
+	}
+
+	@Test
+	void logbackSystemStatusListenerShouldBeRegisteredAndFilterStatusByLevelIfDebugDisabled(CapturedOutput output) {
+		this.loggingSystem.beforeInitialize();
+		LoggerContext loggerContext = this.logger.getLoggerContext();
+		StatusManager statusManager = loggerContext.getStatusManager();
+		statusManager.add(new InfoStatus("INFO STATUS MESSAGE", getClass()));
+		statusManager.add(new WarnStatus("WARN STATUS MESSAGE", getClass()));
+		statusManager.add(new ErrorStatus("ERROR STATUS MESSAGE", getClass()));
+		initialize(this.initializationContext, null, getLogFile(tmpDir() + "/tmp.log", null));
+		assertThat(statusManager.getCopyOfStatusListenerList()).allSatisfy((listener) -> {
+			assertThat(listener).isInstanceOf(SystemStatusListener.class);
+			assertThat(listener).hasFieldOrPropertyWithValue("debug", false);
+		});
+		this.logger.info("Hello world");
+		assertThat(output).doesNotContain("INFO STATUS MESSAGE");
+		assertThat(output).contains("WARN STATUS MESSAGE");
+		assertThat(output).contains("ERROR STATUS MESSAGE");
+		assertThat(output).contains("Hello world");
+	}
+
+	@Test
+	void logbackSystemStatusListenerShouldBeRegisteredWhenUsingCustomLogbackXml(CapturedOutput output) {
+		this.loggingSystem.beforeInitialize();
+		initialize(this.initializationContext, "classpath:logback-include-defaults.xml", null);
+		LoggerContext loggerContext = this.logger.getLoggerContext();
+		assertThat(loggerContext.getStatusManager().getCopyOfStatusListenerList()).allSatisfy((listener) -> {
+			assertThat(listener).isInstanceOf(SystemStatusListener.class);
+			assertThat(listener).hasFieldOrPropertyWithValue("debug", false);
+		});
+		AlwaysFailAppender appender = new AlwaysFailAppender();
+		appender.setContext(loggerContext);
+		appender.start();
+		this.logger.addAppender(appender);
+		this.logger.info("Hello world");
+		assertThat(output).contains("Always Fail Appender").contains("Hello world");
 	}
 
 	@Test
@@ -805,7 +920,7 @@ class LogbackLoggingSystemTests extends AbstractLoggingSystemTests {
 	}
 
 	@Test
-	void applicationNameLoggingToFileWhenDisabled(CapturedOutput output) {
+	void applicationNameLoggingToFileWhenDisabled() {
 		this.environment.setProperty("spring.application.name", "myapp");
 		this.environment.setProperty("logging.include-application-name", "false");
 		File file = new File(tmpDir(), "logback-test.log");
@@ -831,8 +946,17 @@ class LogbackLoggingSystemTests extends AbstractLoggingSystemTests {
 		assertThatIllegalStateException()
 			.isThrownBy(() -> initialize(this.initializationContext, "classpath:logback-invalid-format.txt",
 					getLogFile(tmpDir() + "/tmp.log", null)))
-			.satisfies((ex) -> assertThat(ex.getCause()).isInstanceOf(IllegalArgumentException.class)
-				.hasMessageStartingWith("Unsupported file extension"));
+			.satisfies((ex) -> assertThat(ex.getCause()).isInstanceOf(JoranException.class)
+				.hasMessageStartingWith("Problem parsing XML document. See previously reported errors"));
+	}
+
+	@Test
+	void whenConfigLocationIsXmlFileWithoutExtensionShouldWork(CapturedOutput output) {
+		this.loggingSystem.beforeInitialize();
+		initialize(this.initializationContext, "classpath:logback-without-extension",
+				getLogFile(tmpDir() + "/tmp.log", null));
+		this.logger.info("No extension and works!");
+		assertThat(output.toString()).contains("No extension and works!");
 	}
 
 	@Test
@@ -877,11 +1001,82 @@ class LogbackLoggingSystemTests extends AbstractLoggingSystemTests {
 	}
 
 	@Test
+	void applicationGroupLoggingToConsoleWhenHasApplicationGroup(CapturedOutput output) {
+		this.environment.setProperty("spring.application.group", "mygroup");
+		initialize(this.initializationContext, null, null);
+		this.logger.info("Hello world");
+		assertThat(getLineWithText(output, "Hello world")).contains("[mygroup] ");
+	}
+
+	@Test
+	void applicationGroupLoggingToConsoleWhenHasApplicationGroupWithParenthesis(CapturedOutput output) {
+		this.environment.setProperty("spring.application.group", "mygroup (dev)");
+		initialize(this.initializationContext, null, null);
+		this.logger.info("Hello world");
+		assertThat(getLineWithText(output, "Hello world")).contains("[mygroup (dev)] ");
+	}
+
+	@Test
+	void applicationGroupLoggingToConsoleWhenDisabled(CapturedOutput output) {
+		this.environment.setProperty("spring.application.group", "mygroup");
+		this.environment.setProperty("logging.include-application-group", "false");
+		initialize(this.initializationContext, null, null);
+		this.logger.info("Hello world");
+		assertThat(getLineWithText(output, "Hello world")).doesNotContain("mygroup").doesNotContain("null");
+	}
+
+	@Test
+	void applicationGroupLoggingToFileWhenHasApplicationGroup() {
+		this.environment.setProperty("spring.application.group", "mygroup");
+		File file = new File(tmpDir(), "logback-test.log");
+		LogFile logFile = getLogFile(file.getPath(), null);
+		initialize(this.initializationContext, null, logFile);
+		this.logger.info("Hello world");
+		assertThat(getLineWithText(file, "Hello world")).contains("[mygroup] ");
+	}
+
+	@Test
+	void applicationGroupLoggingToFileWhenHasApplicationGroupWithParenthesis() {
+		this.environment.setProperty("spring.application.group", "mygroup (dev)");
+		File file = new File(tmpDir(), "logback-test.log");
+		LogFile logFile = getLogFile(file.getPath(), null);
+		initialize(this.initializationContext, null, logFile);
+		this.logger.info("Hello world");
+		assertThat(getLineWithText(file, "Hello world")).contains("[mygroup (dev)] ");
+	}
+
+	@Test
+	void applicationGroupLoggingToFileWhenDisabled() {
+		this.environment.setProperty("spring.application.group", "myGroup");
+		this.environment.setProperty("logging.include-application-group", "false");
+		File file = new File(tmpDir(), "logback-test.log");
+		LogFile logFile = getLogFile(file.getPath(), null);
+		initialize(this.initializationContext, null, logFile);
+		this.logger.info("Hello world");
+		assertThat(getLineWithText(file, "Hello world")).doesNotContain("myGroup").doesNotContain("null");
+	}
+
+	@Test
 	void shouldNotContainAnsiEscapeCodes(CapturedOutput output) {
 		this.loggingSystem.beforeInitialize();
 		initialize(this.initializationContext, null, null);
 		this.logger.info("Hello world");
 		assertThat(output).doesNotContain("\033[");
+	}
+
+	@Test
+	void getEnvironment() {
+		this.loggingSystem.beforeInitialize();
+		initialize(this.initializationContext, null, null);
+		assertThat(this.logger.getLoggerContext().getObject(Environment.class.getName())).isSameAs(this.environment);
+	}
+
+	@Test
+	void getEnvironmentWhenUsingFile() {
+		this.loggingSystem.beforeInitialize();
+		LogFile logFile = getLogFile(tmpDir() + "/example.log", null, false);
+		initialize(this.initializationContext, "classpath:logback-nondefault.xml", logFile);
+		assertThat(this.logger.getLoggerContext().getObject(Environment.class.getName())).isSameAs(this.environment);
 	}
 
 	private void initialize(LoggingInitializationContext context, String configLocation, LogFile logFile) {
@@ -906,6 +1101,15 @@ class LogbackLoggingSystemTests extends AbstractLoggingSystemTests {
 
 	private static SizeAndTimeBasedRollingPolicy<?> getRollingPolicy() {
 		return (SizeAndTimeBasedRollingPolicy<?>) getFileAppender().getRollingPolicy();
+	}
+
+	private static final class AlwaysFailAppender extends AppenderBase<ILoggingEvent> {
+
+		@Override
+		protected void append(ILoggingEvent eventObject) {
+			throw new RuntimeException("Always Fail Appender");
+		}
+
 	}
 
 }

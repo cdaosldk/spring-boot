@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2024 the original author or authors.
+ * Copyright 2012-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -142,7 +142,6 @@ class ServerPropertiesTests {
 		assertThat(tomcat.getRemoteip().getProtocolHeader()).isEqualTo("X-Forwarded-Protocol");
 		assertThat(tomcat.getRemoteip().getInternalProxies()).isEqualTo("10\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}");
 		assertThat(tomcat.getRemoteip().getTrustedProxies()).isEqualTo("proxy1|proxy2|proxy3");
-		assertThat(tomcat.isRejectIllegalHeader()).isFalse();
 		assertThat(tomcat.getBackgroundProcessorDelay()).hasSeconds(10);
 		assertThat(tomcat.getRelaxedPathChars()).containsExactly('|', '<');
 		assertThat(tomcat.getRelaxedQueryChars()).containsExactly('^', '|');
@@ -200,7 +199,7 @@ class ServerPropertiesTests {
 	}
 
 	@Test
-	void testCustomizeUriEncoding() {
+	void testCustomizeTomcatUriEncoding() {
 		bind("server.tomcat.uri-encoding", "US-ASCII");
 		assertThat(this.properties.getTomcat().getUriEncoding()).isEqualTo(StandardCharsets.US_ASCII);
 	}
@@ -236,15 +235,21 @@ class ServerPropertiesTests {
 	}
 
 	@Test
-	void customizeMaxKeepAliveRequests() {
+	void testCustomizeTomcatMaxKeepAliveRequests() {
 		bind("server.tomcat.max-keep-alive-requests", "200");
 		assertThat(this.properties.getTomcat().getMaxKeepAliveRequests()).isEqualTo(200);
 	}
 
 	@Test
-	void customizeMaxKeepAliveRequestsWithInfinite() {
+	void testCustomizeTomcatMaxKeepAliveRequestsWithInfinite() {
 		bind("server.tomcat.max-keep-alive-requests", "-1");
 		assertThat(this.properties.getTomcat().getMaxKeepAliveRequests()).isEqualTo(-1);
+	}
+
+	@Test
+	void testCustomizeTomcatMaxParameterCount() {
+		bind("server.tomcat.max-parameter-count", "100");
+		assertThat(this.properties.getTomcat().getMaxParameterCount()).isEqualTo(100);
 	}
 
 	@Test
@@ -381,6 +386,12 @@ class ServerPropertiesTests {
 	}
 
 	@Test
+	void tomcatMaxParameterCountMatchesConnectorDefault() {
+		assertThat(this.properties.getTomcat().getMaxParameterCount())
+			.isEqualTo(getDefaultConnector().getMaxParameterCount());
+	}
+
+	@Test
 	void tomcatBackgroundProcessorDelayMatchesEngineDefault() {
 		assertThat(this.properties.getTomcat().getBackgroundProcessorDelay())
 			.hasSeconds((new StandardEngine().getBackgroundProcessorDelay()));
@@ -423,13 +434,6 @@ class ServerPropertiesTests {
 	}
 
 	@Test
-	@SuppressWarnings("removal")
-	void tomcatRejectIllegalHeaderMatchesProtocolDefault() throws Exception {
-		assertThat(getDefaultProtocol()).hasFieldOrPropertyWithValue("rejectIllegalHeader",
-				this.properties.getTomcat().isRejectIllegalHeader());
-	}
-
-	@Test
 	void tomcatUseRelativeRedirectsDefaultsToFalse() {
 		assertThat(this.properties.getTomcat().isUseRelativeRedirects()).isFalse();
 	}
@@ -463,6 +467,15 @@ class ServerPropertiesTests {
 		Server server = jetty.getServer();
 		assertThat(this.properties.getJetty().getMaxHttpFormPostSize().toBytes())
 			.isEqualTo(((ServletContextHandler) server.getHandler()).getMaxFormContentSize());
+	}
+
+	@Test
+	void jettyMaxFormKeysMatchesDefault() {
+		JettyServletWebServerFactory jettyFactory = new JettyServletWebServerFactory(0);
+		JettyWebServer jetty = (JettyWebServer) jettyFactory.getWebServer();
+		Server server = jetty.getServer();
+		assertThat(this.properties.getJetty().getMaxFormKeys())
+			.isEqualTo(((ServletContextHandler) server.getHandler()).getMaxFormKeys());
 	}
 
 	@Test

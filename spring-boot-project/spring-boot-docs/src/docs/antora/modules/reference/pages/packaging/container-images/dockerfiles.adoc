@@ -1,12 +1,12 @@
 [[packaging.container-images.dockerfiles]]
 = Dockerfiles
 
-While it is possible to convert a Spring Boot uber jar into a Docker image with just a few lines in the Dockerfile, using the xref:packaging/container-images/efficient-images.adoc#packaging.container-images.efficient-images.layering[layering feature] will result in an optimized image.
+While it is possible to convert a Spring Boot uber jar into a Docker image with just a few lines in the `Dockerfile`, using the xref:packaging/container-images/efficient-images.adoc#packaging.container-images.efficient-images.layering[layering feature] will result in an optimized image.
 When you create a jar containing the layers index file, the `spring-boot-jarmode-tools` jar will be added as a dependency to your jar.
 With this jar on the classpath, you can launch your application in a special mode which allows the bootstrap code to run something entirely different from your application, for example, something that extracts the layers.
 
 CAUTION: The `tools` mode can not be used with a xref:how-to:deployment/installing.adoc[fully executable Spring Boot archive] that includes a launch script.
-Disable launch script configuration when building a jar file that is intended to be used with `layertools`.
+Disable launch script configuration when building a jar file that is intended to be used with the `extract` tools mode command.
 
 Here’s how you can launch your jar with a `tools` jar mode:
 
@@ -28,23 +28,15 @@ Available commands:
   help         Help about any command
 ----
 
-The `extract` command can be used to easily split the application into layers to be added to the Dockerfile.
-Here is an example of a Dockerfile using `jarmode`.
+The `extract` command can be used to easily split the application into layers to be added to the `Dockerfile`.
+Here is an example of a `Dockerfile` using `jarmode`.
 
 [source,dockerfile]
 ----
-FROM bellsoft/liberica-runtime-container:jre-17-cds-slim-glibc as builder
-WORKDIR /builder
-ARG JAR_FILE=target/*.jar
-COPY ${JAR_FILE} application.jar
-RUN java -Djarmode=tools -jar application.jar extract --layers --destination extracted
-
-FROM bellsoft/liberica-runtime-container:jre-17-cds-slim-glibc
-WORKDIR /application
-COPY --from=builder /builder/extracted/dependencies/ ./
-COPY --from=builder /builder/extracted/spring-boot-loader/ ./
-COPY --from=builder /builder/extracted/snapshot-dependencies/ ./
-COPY --from=builder /builder/extracted/application/ ./
+include::reference:partial$dockerfile[]
+# Start the application jar - this is not the uber jar used by the builder
+# This jar only contains application code and references to the extracted jar files
+# This layout is efficient to start up and CDS friendly
 ENTRYPOINT ["java", "-jar", "application.jar"]
 ----
 
@@ -55,10 +47,31 @@ Assuming the above `Dockerfile` is in the current directory, your Docker image c
 $ docker build --build-arg JAR_FILE=path/to/myapp.jar .
 ----
 
-This is a multi-stage Dockerfile.
+This is a multi-stage `Dockerfile`.
 The builder stage extracts the directories that are needed later.
 Each of the `COPY` commands relates to the layers extracted by the jarmode.
 
-Of course, a Dockerfile can be written without using the `jarmode`.
+Of course, a `Dockerfile` can be written without using the `jarmode`.
 You can use some combination of `unzip` and `mv` to move things to the right layer but `jarmode` simplifies that.
 Additionally, the layout created by the `jarmode` is CDS friendly out of the box.
+
+
+
+[[packaging.container-images.dockerfiles.cds]]
+== CDS
+
+If you want to additionally enable xref:reference:packaging/class-data-sharing.adoc[CDS], you can use this `Dockerfile`:
+[source,dockerfile]
+----
+include::reference:partial$dockerfile[]
+# Execute the CDS training run
+RUN java -XX:ArchiveClassesAtExit=application.jsa -Dspring.context.exit=onRefresh -jar application.jar
+# Start the application jar with CDS enabled - this is not the uber jar used by the builder
+# This jar only contains application code and references to the extracted jar files
+# This layout is efficient to start up and CDS friendly
+ENTRYPOINT ["java", "-XX:SharedArchiveFile=application.jsa", "-jar", "application.jar"]
+----
+
+This is mostly the same as the above `Dockerfile`.
+As the last steps, it creates the CDS archive by doing a training run and passes the CDS parameter to `java -jar`.
+

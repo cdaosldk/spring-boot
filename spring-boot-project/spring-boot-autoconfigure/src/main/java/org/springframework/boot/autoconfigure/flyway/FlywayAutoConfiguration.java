@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2024 the original author or authors.
+ * Copyright 2012-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -46,6 +46,7 @@ import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.AnyNestedCondition;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBooleanProperty;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -105,7 +106,7 @@ import org.springframework.util.function.SingletonSupplier;
 		HibernateJpaAutoConfiguration.class })
 @ConditionalOnClass(Flyway.class)
 @Conditional(FlywayDataSourceCondition.class)
-@ConditionalOnProperty(prefix = "spring.flyway", name = "enabled", matchIfMissing = true)
+@ConditionalOnBooleanProperty(name = "spring.flyway.enabled", matchIfMissing = true)
 @Import(DatabaseInitializationDependencyConfigurer.class)
 @ImportRuntimeHints(FlywayAutoConfigurationRuntimeHints.class)
 public class FlywayAutoConfiguration {
@@ -225,9 +226,10 @@ public class FlywayAutoConfiguration {
 		 * @param configuration the configuration
 		 * @param properties the properties
 		 */
+		@SuppressWarnings("removal")
 		private void configureProperties(FluentConfiguration configuration, FlywayProperties properties) {
 			// NOTE: Using method references in the mapper methods can break
-			// back-compatibilty (see gh-38164)
+			// back-compatibility (see gh-38164)
 			PropertyMapper map = PropertyMapper.get().alwaysApplyingWhenNonNull();
 			String[] locations = new LocationResolver(configuration.getDataSource())
 				.resolveLocations(properties.getLocations())
@@ -302,6 +304,8 @@ public class FlywayAutoConfiguration {
 				.to((suffix) -> configuration.scriptPlaceholderSuffix(suffix));
 			configureExecuteInTransaction(configuration, properties, map);
 			map.from(properties::getLoggers).to((loggers) -> configuration.loggers(loggers));
+			map.from(properties::getCommunityDbSupportEnabled)
+				.to((communityDbSupportEnabled) -> configuration.communityDBSupportEnabled(communityDbSupportEnabled));
 			// Flyway Teams properties
 			map.from(properties.getBatch()).to((batch) -> configuration.batch(batch));
 			map.from(properties.getDryRunOutput()).to((dryRunOutput) -> configuration.dryRunOutput(dryRunOutput));
@@ -447,7 +451,7 @@ public class FlywayAutoConfiguration {
 
 		}
 
-		@ConditionalOnProperty(prefix = "spring.flyway", name = "url")
+		@ConditionalOnProperty("spring.flyway.url")
 		private static final class FlywayUrlCondition {
 
 		}
@@ -579,7 +583,7 @@ public class FlywayAutoConfiguration {
 		Extension(FluentConfiguration configuration, Class<E> type, String name) {
 			this.extension = SingletonSupplier.of(() -> {
 				E extension = configuration.getPluginRegister().getPlugin(type);
-				Assert.notNull(extension, () -> "Flyway %s extension missing".formatted(name));
+				Assert.state(extension != null, () -> "Flyway %s extension missing".formatted(name));
 				return extension;
 			});
 		}

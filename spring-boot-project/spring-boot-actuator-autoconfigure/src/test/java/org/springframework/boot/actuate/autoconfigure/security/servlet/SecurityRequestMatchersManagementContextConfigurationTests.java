@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2023 the original author or authors.
+ * Copyright 2012-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,8 +19,6 @@ package org.springframework.boot.actuate.autoconfigure.security.servlet;
 import org.junit.jupiter.api.Test;
 
 import org.springframework.boot.autoconfigure.AutoConfigurations;
-import org.springframework.boot.autoconfigure.security.servlet.AntPathRequestMatcherProvider;
-import org.springframework.boot.autoconfigure.security.servlet.RequestMatcherProvider;
 import org.springframework.boot.autoconfigure.web.servlet.DispatcherServletPath;
 import org.springframework.boot.autoconfigure.web.servlet.JerseyApplicationPath;
 import org.springframework.boot.test.context.FilteredClassLoader;
@@ -61,7 +59,7 @@ class SecurityRequestMatchersManagementContextConfigurationTests {
 	void registersRequestMatcherProviderIfMvcPresent() {
 		this.contextRunner.withUserConfiguration(TestMvcConfiguration.class).run((context) -> {
 			AntPathRequestMatcherProvider matcherProvider = context.getBean(AntPathRequestMatcherProvider.class);
-			RequestMatcher requestMatcher = matcherProvider.getRequestMatcher("/example");
+			RequestMatcher requestMatcher = matcherProvider.getRequestMatcher("/example", null);
 			assertThat(requestMatcher).extracting("pattern").isEqualTo("/custom/example");
 		});
 	}
@@ -72,7 +70,7 @@ class SecurityRequestMatchersManagementContextConfigurationTests {
 			.withUserConfiguration(TestJerseyConfiguration.class)
 			.run((context) -> {
 				AntPathRequestMatcherProvider matcherProvider = context.getBean(AntPathRequestMatcherProvider.class);
-				RequestMatcher requestMatcher = matcherProvider.getRequestMatcher("/example");
+				RequestMatcher requestMatcher = matcherProvider.getRequestMatcher("/example", null);
 				assertThat(requestMatcher).extracting("pattern").isEqualTo("/admin/example");
 			});
 	}
