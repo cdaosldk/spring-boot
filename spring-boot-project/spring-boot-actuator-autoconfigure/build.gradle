@@ -10,8 +10,8 @@ plugins {
 description = "Spring Boot Actuator AutoConfigure"
 
 dependencies {
-	api(project(":spring-boot-project:spring-boot-actuator"))
 	api(project(":spring-boot-project:spring-boot"))
+	api(project(":spring-boot-project:spring-boot-actuator"))
 	api(project(":spring-boot-project:spring-boot-autoconfigure"))
 
 	implementation("com.fasterxml.jackson.core:jackson-databind")
@@ -58,7 +58,6 @@ dependencies {
 	optional("io.micrometer:micrometer-registry-statsd")
 	optional("io.micrometer:micrometer-registry-wavefront")
 	optional("io.zipkin.reporter2:zipkin-reporter-brave")
-	optional("io.zipkin.reporter2:zipkin-sender-urlconnection")
 	optional("io.opentelemetry:opentelemetry-exporter-zipkin")
 	optional("io.opentelemetry:opentelemetry-exporter-otlp")
 	optional("io.projectreactor.netty:reactor-netty-http")
@@ -135,8 +134,9 @@ dependencies {
 
 	testImplementation(project(":spring-boot-project:spring-boot-test"))
 	testImplementation(project(":spring-boot-project:spring-boot-tools:spring-boot-test-support"))
+	testImplementation(testFixtures(project(":spring-boot-project:spring-boot")))
 	testImplementation("io.micrometer:micrometer-observation-test")
-	testImplementation("io.micrometer:micrometer-tracing-test")
+	testImplementation("io.opentelemetry:opentelemetry-exporter-common")
 	testImplementation("io.projectreactor:reactor-test")
 	testImplementation("io.prometheus:prometheus-metrics-exposition-formats")
 	testImplementation("io.r2dbc:r2dbc-h2")
@@ -195,7 +195,7 @@ dependencies {
 tasks.named("test") {
 	jvmArgs += "--add-opens=java.base/java.net=ALL-UNNAMED"
 	filter {
-		excludeTestsMatching("org.springframework.boot.actuate.autoconfigure.endpoint.web.documentation.*")
+		excludeTestsMatching("*DocumentationTests")
 	}
 }
 
@@ -204,7 +204,7 @@ def documentationTest = tasks.register("documentationTest", Test) {
 	classpath = testing.suites.test.sources.runtimeClasspath
 	jvmArgs += "--add-opens=java.base/java.net=ALL-UNNAMED"
 	filter {
-		includeTestsMatching("org.springframework.boot.actuate.autoconfigure.endpoint.web.documentation.*")
+		includeTestsMatching("*DocumentationTests")
 	}
 	outputs.dir(layout.buildDirectory.dir("generated-snippets"))
 	develocity {

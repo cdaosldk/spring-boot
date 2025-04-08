@@ -87,7 +87,7 @@ public class DockerApi {
 	 * Create a new {@link DockerApi} instance.
 	 */
 	public DockerApi() {
-		this(HttpTransport.create(null));
+		this(null);
 	}
 
 	/**
@@ -96,21 +96,34 @@ public class DockerApi {
 	 * @since 2.4.0
 	 */
 	public DockerApi(DockerHostConfiguration dockerHost) {
-		this(HttpTransport.create(dockerHost));
+		this(dockerHost, DockerLog.toSystemOut());
+	}
+
+	/**
+	 * Create a new {@link DockerApi} instance.
+	 * @param dockerHost the Docker daemon host information
+	 * @param log a logger used to record output
+	 * @since 3.5.0
+	 */
+	public DockerApi(DockerHostConfiguration dockerHost, DockerLog log) {
+		this(HttpTransport.create(dockerHost), log);
 	}
 
 	/**
 	 * Create a new {@link DockerApi} instance backed by a specific {@link HttpTransport}
 	 * implementation.
 	 * @param http the http implementation
+	 * @param log a logger used to record output
 	 */
-	DockerApi(HttpTransport http) {
+	DockerApi(HttpTransport http, DockerLog log) {
+		Assert.notNull(http, "'http' must not be null");
+		Assert.notNull(log, "'log' must not be null");
 		this.http = http;
 		this.jsonStream = new JsonStream(SharedObjectMapper.get());
 		this.image = new ImageApi();
 		this.container = new ContainerApi();
 		this.volume = new VolumeApi();
-		this.system = new SystemApi();
+		this.system = new SystemApi(log);
 	}
 
 	private HttpTransport http() {
@@ -133,9 +146,11 @@ public class DockerApi {
 		verifyApiVersion(apiVersion);
 		try {
 			URIBuilder builder = new URIBuilder("/v" + apiVersion + path);
-			int param = 0;
-			while (param < params.length) {
-				builder.addParameter(Objects.toString(params[param++]), Objects.toString(params[param++]));
+			if (params != null) {
+				int param = 0;
+				while (param < params.length) {
+					builder.addParameter(Objects.toString(params[param++]), Objects.toString(params[param++]));
+				}
 			}
 			return builder.build();
 		}
@@ -485,7 +500,10 @@ public class DockerApi {
 	 */
 	class SystemApi {
 
-		SystemApi() {
+		private final DockerLog log;
+
+		SystemApi(DockerLog log) {
+			this.log = log;
 		}
 
 		/**
@@ -502,6 +520,7 @@ public class DockerApi {
 					}
 				}
 				catch (Exception ex) {
+					this.log.log("Warning: Failed to determine Docker API version: " + ex.getMessage());
 					// fall through to return default value
 				}
 				return UNKNOWN_API_VERSION;

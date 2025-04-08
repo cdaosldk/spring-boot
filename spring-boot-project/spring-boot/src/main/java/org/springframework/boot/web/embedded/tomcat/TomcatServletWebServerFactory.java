@@ -135,8 +135,6 @@ public class TomcatServletWebServerFactory extends AbstractServletWebServerFacto
 
 	private List<LifecycleListener> contextLifecycleListeners = new ArrayList<>();
 
-	private final List<LifecycleListener> serverLifecycleListeners = getDefaultServerLifecycleListeners();
-
 	private Set<TomcatContextCustomizer> tomcatContextCustomizers = new LinkedHashSet<>();
 
 	private Set<TomcatConnectorCustomizer> tomcatConnectorCustomizers = new LinkedHashSet<>();
@@ -158,6 +156,8 @@ public class TomcatServletWebServerFactory extends AbstractServletWebServerFacto
 	private int backgroundProcessorDelay;
 
 	private boolean disableMBeanRegistry = true;
+
+	private boolean useApr;
 
 	/**
 	 * Create a new {@link TomcatServletWebServerFactory} instance.
@@ -184,13 +184,10 @@ public class TomcatServletWebServerFactory extends AbstractServletWebServerFacto
 		super(contextPath, port);
 	}
 
-	private static List<LifecycleListener> getDefaultServerLifecycleListeners() {
+	private List<LifecycleListener> getDefaultServerLifecycleListeners() {
 		ArrayList<LifecycleListener> lifecycleListeners = new ArrayList<>();
-		if (!NativeDetector.inNativeImage()) {
-			AprLifecycleListener aprLifecycleListener = new AprLifecycleListener();
-			if (AprLifecycleListener.isAprAvailable()) {
-				lifecycleListeners.add(aprLifecycleListener);
-			}
+		if (!NativeDetector.inNativeImage() && this.useApr) {
+			lifecycleListeners.add(new AprLifecycleListener());
 		}
 		return lifecycleListeners;
 	}
@@ -203,7 +200,7 @@ public class TomcatServletWebServerFactory extends AbstractServletWebServerFacto
 		Tomcat tomcat = new Tomcat();
 		File baseDir = (this.baseDirectory != null) ? this.baseDirectory : createTempDir("tomcat");
 		tomcat.setBaseDir(baseDir.getAbsolutePath());
-		for (LifecycleListener listener : this.serverLifecycleListeners) {
+		for (LifecycleListener listener : getDefaultServerLifecycleListeners()) {
 			tomcat.getServer().addLifecycleListener(listener);
 		}
 		Connector connector = new Connector(this.protocol);
@@ -238,9 +235,10 @@ public class TomcatServletWebServerFactory extends AbstractServletWebServerFacto
 	protected void prepareContext(Host host, ServletContextInitializer[] initializers) {
 		File documentRoot = getValidDocumentRoot();
 		TomcatEmbeddedContext context = new TomcatEmbeddedContext();
-		if (documentRoot != null) {
-			context.setResources(new LoaderHidingResourceRoot(context));
-		}
+		WebResourceRoot resourceRoot = (documentRoot != null) ? new LoaderHidingResourceRoot(context)
+				: new StandardRoot(context);
+		ignoringNoSuchMethodError(() -> resourceRoot.setReadOnly(true));
+		context.setResources(resourceRoot);
 		context.setName(getContextPath());
 		context.setDisplayName(getDisplayName());
 		context.setPath(getContextPath());
@@ -252,12 +250,7 @@ public class TomcatServletWebServerFactory extends AbstractServletWebServerFacto
 		context.setParentClassLoader(parentClassLoader);
 		resetDefaultLocaleMapping(context);
 		addLocaleMappings(context);
-		try {
-			context.setCreateUploadTargets(true);
-		}
-		catch (NoSuchMethodError ex) {
-			// Tomcat is < 8.5.39. Continue.
-		}
+		context.setCreateUploadTargets(true);
 		configureTldPatterns(context);
 		WebappLoader loader = new WebappLoader();
 		loader.setLoaderInstance(new TomcatEmbeddedWebappClassLoader(parentClassLoader));
@@ -275,6 +268,14 @@ public class TomcatServletWebServerFactory extends AbstractServletWebServerFacto
 		host.addChild(context);
 		configureContext(context, initializersToUse);
 		postProcessContext(context);
+	}
+
+	private void ignoringNoSuchMethodError(Runnable method) {
+		try {
+			method.run();
+		}
+		catch (NoSuchMethodError ex) {
+		}
 	}
 
 	/**
@@ -781,6 +782,15 @@ public class TomcatServletWebServerFactory extends AbstractServletWebServerFacto
 	}
 
 	/**
+	 * Whether to use APR.
+	 * @param useApr whether to use APR
+	 * @since 3.4.4
+	 */
+	public void setUseApr(boolean useApr) {
+		this.useApr = useApr;
+	}
+
+	/**
 	 * {@link LifecycleListener} to disable persistence in the {@link StandardManager}. A
 	 * {@link LifecycleListener} is used so not to interfere with Tomcat's default manager
 	 * creation logic.
@@ -814,7 +824,7 @@ public class TomcatServletWebServerFactory extends AbstractServletWebServerFacto
 
 		@Override
 		public void lifecycleEvent(LifecycleEvent event) {
-			if (event.getType().equals(Lifecycle.CONFIGURE_START_EVENT)) {
+			if (event.getType().equals(Lifecycle.BEFORE_INIT_EVENT)) {
 				addResourceJars(getUrlsOfJarsWithMetaInfResources());
 			}
 		}
@@ -833,6 +843,9 @@ public class TomcatServletWebServerFactory extends AbstractServletWebServerFacto
 				else {
 					addResourceSet(url.toString());
 				}
+			}
+			for (WebResourceSet resources : this.context.getResources().getJarResources()) {
+				resources.setReadOnly(true);
 			}
 		}
 
@@ -985,11 +998,12 @@ public class TomcatServletWebServerFactory extends AbstractServletWebServerFacto
 		@Override
 		public String generateHeader(Cookie cookie, HttpServletRequest request) {
 			SameSite sameSite = getSameSite(cookie);
-			if (sameSite == null) {
+			String sameSiteValue = (sameSite != null) ? sameSite.attributeValue() : null;
+			if (sameSiteValue == null) {
 				return super.generateHeader(cookie, request);
 			}
 			Rfc6265CookieProcessor delegate = new Rfc6265CookieProcessor();
-			delegate.setSameSiteCookies(sameSite.attributeValue());
+			delegate.setSameSiteCookies(sameSiteValue);
 			return delegate.generateHeader(cookie, request);
 		}
 

@@ -25,10 +25,12 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.stubbing.Answer;
 
+import org.springframework.boot.buildpack.platform.build.Builder.BuildLogAdapter;
 import org.springframework.boot.buildpack.platform.docker.DockerApi;
 import org.springframework.boot.buildpack.platform.docker.DockerApi.ContainerApi;
 import org.springframework.boot.buildpack.platform.docker.DockerApi.ImageApi;
 import org.springframework.boot.buildpack.platform.docker.DockerApi.VolumeApi;
+import org.springframework.boot.buildpack.platform.docker.DockerLog;
 import org.springframework.boot.buildpack.platform.docker.TotalProgressPullListener;
 import org.springframework.boot.buildpack.platform.docker.configuration.DockerConfiguration;
 import org.springframework.boot.buildpack.platform.docker.transport.DockerEngineException;
@@ -45,6 +47,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
+import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
@@ -71,8 +74,25 @@ class BuilderTests {
 
 	@Test
 	void createWithDockerConfiguration() {
+		assertThatNoException().isThrownBy(() -> new Builder(BuildLog.toSystemOut()));
+	}
+
+	@Test
+	void createDockerApiWithLogDockerLogDelegate() {
 		Builder builder = new Builder(BuildLog.toSystemOut());
-		assertThat(builder).isNotNull();
+		assertThat(builder).extracting("docker")
+			.extracting("system")
+			.extracting("log")
+			.isInstanceOf(BuildLogAdapter.class);
+	}
+
+	@Test
+	void createDockerApiWithLogDockerSystemOutDelegate() {
+		Builder builder = new Builder(mock(BuildLog.class));
+		assertThat(builder).extracting("docker")
+			.extracting("system")
+			.extracting("log")
+			.isInstanceOf(DockerLog.toSystemOut().getClass());
 	}
 
 	@Test

@@ -82,6 +82,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.InOrder;
 
 import org.springframework.boot.ssl.DefaultSslBundleRegistry;
+import org.springframework.boot.testsupport.classpath.resources.WithPackageResources;
 import org.springframework.boot.testsupport.system.CapturedOutput;
 import org.springframework.boot.web.server.PortInUseException;
 import org.springframework.boot.web.server.Shutdown;
@@ -149,12 +150,20 @@ class TomcatServletWebServerFactoryTests extends AbstractServletWebServerFactory
 	@Test
 	void defaultTomcatListeners() {
 		TomcatServletWebServerFactory factory = getFactory();
-		if (AprLifecycleListener.isAprAvailable()) {
-			assertThat(factory.getContextLifecycleListeners()).singleElement().isInstanceOf(AprLifecycleListener.class);
-		}
-		else {
-			assertThat(factory.getContextLifecycleListeners()).isEmpty();
-		}
+		assertThat(factory.getContextLifecycleListeners()).isEmpty();
+		TomcatWebServer tomcatWebServer = (TomcatWebServer) factory.getWebServer();
+		this.webServer = tomcatWebServer;
+		assertThat(tomcatWebServer.getTomcat().getServer().findLifecycleListeners()).isEmpty();
+	}
+
+	@Test
+	void aprShouldBeOptIn() {
+		TomcatServletWebServerFactory factory = getFactory();
+		factory.setUseApr(true);
+		TomcatWebServer tomcatWebServer = (TomcatWebServer) factory.getWebServer();
+		this.webServer = tomcatWebServer;
+		assertThat(tomcatWebServer.getTomcat().getServer().findLifecycleListeners()).singleElement()
+			.isInstanceOf(AprLifecycleListener.class);
 	}
 
 	@Test
@@ -661,12 +670,12 @@ class TomcatServletWebServerFactoryTests extends AbstractServletWebServerFactory
 	}
 
 	@Test
+	@WithPackageResources({ "1.crt", "1.key", "2.crt", "2.key" })
 	void shouldUpdateSslWhenReloadingSslBundles() throws Exception {
 		TomcatServletWebServerFactory factory = getFactory();
 		addTestTxtFile(factory);
 		DefaultSslBundleRegistry bundles = new DefaultSslBundleRegistry("test",
-				createPemSslBundle("classpath:org/springframework/boot/web/embedded/tomcat/1.crt",
-						"classpath:org/springframework/boot/web/embedded/tomcat/1.key"));
+				createPemSslBundle("classpath:1.crt", "classpath:1.key"));
 		factory.setSslBundles(bundles);
 		factory.setSsl(Ssl.forBundle("test"));
 		this.webServer = factory.getWebServer();
@@ -678,18 +687,18 @@ class TomcatServletWebServerFactoryTests extends AbstractServletWebServerFactory
 		assertThat(getResponse(getLocalUrl("https", "/test.txt"), requestFactory)).isEqualTo("test");
 		assertThat(verifier.getLastPrincipal()).isEqualTo("CN=1");
 		requestFactory = createHttpComponentsRequestFactory(tlsSocketStrategy);
-		bundles.updateBundle("test", createPemSslBundle("classpath:org/springframework/boot/web/embedded/tomcat/2.crt",
-				"classpath:org/springframework/boot/web/embedded/tomcat/2.key"));
+		bundles.updateBundle("test", createPemSslBundle("classpath:2.crt", "classpath:2.key"));
 		assertThat(getResponse(getLocalUrl("https", "/test.txt"), requestFactory)).isEqualTo("test");
 		assertThat(verifier.getLastPrincipal()).isEqualTo("CN=2");
 	}
 
 	@Test
+	@WithPackageResources("test.jks")
 	void sslWithHttp11Nio2Protocol() throws Exception {
 		TomcatServletWebServerFactory factory = getFactory();
 		addTestTxtFile(factory);
 		factory.setProtocol(Http11Nio2Protocol.class.getName());
-		factory.setSsl(getSsl(null, "password", "src/test/resources/test.jks"));
+		factory.setSsl(getSsl(null, "password", "classpath:test.jks"));
 		this.webServer = factory.getWebServer();
 		this.webServer.start();
 		HttpComponentsClientHttpRequestFactory requestFactory = createHttpComponentsRequestFactory(

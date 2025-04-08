@@ -87,7 +87,6 @@ public abstract class DocumentConfigurationProperties extends DefaultTask {
 		config.accept("spring.autoconfigure");
 		config.accept("spring.banner");
 		config.accept("spring.beaninfo");
-		config.accept("spring.codec");
 		config.accept("spring.config");
 		config.accept("spring.info");
 		config.accept("spring.jmx");
@@ -191,7 +190,6 @@ public abstract class DocumentConfigurationProperties extends DefaultTask {
 		prefix.accept("spring.groovy");
 		prefix.accept("spring.mustache");
 		prefix.accept("spring.thymeleaf");
-		prefix.accept("spring.groovy.template.configuration", "See GroovyMarkupConfigurer");
 	}
 
 	private void serverPrefixes(Config prefix) {

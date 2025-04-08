@@ -28,6 +28,7 @@ import java.nio.file.WatchEvent;
 import java.nio.file.WatchKey;
 import java.nio.file.WatchService;
 import java.time.Duration;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -35,7 +36,6 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -86,11 +86,7 @@ class FileWatcher implements Closeable {
 					this.thread = new WatcherThread();
 					this.thread.start();
 				}
-				Set<Path> actualPaths = new HashSet<>();
-				for (Path path : paths) {
-					actualPaths.add(resolveSymlinkIfNecessary(path));
-				}
-				this.thread.register(new Registration(actualPaths, action));
+				this.thread.register(new Registration(getRegistrationPaths(paths), action));
 			}
 			catch (IOException ex) {
 				throw new UncheckedIOException("Failed to register paths for watching: " + paths, ex);
@@ -98,12 +94,50 @@ class FileWatcher implements Closeable {
 		}
 	}
 
-	private static Path resolveSymlinkIfNecessary(Path path) throws IOException {
-		if (Files.isSymbolicLink(path)) {
-			Path target = path.resolveSibling(Files.readSymbolicLink(path));
-			return resolveSymlinkIfNecessary(target);
+	/**
+	 * Retrieves all {@link Path Paths} that should be registered for the specified
+	 * {@link Path}. If the path is a symlink, changes to the symlink should be monitored,
+	 * not just the file it points to. For example, for the given {@code keystore.jks}
+	 * path in the following directory structure:<pre>
+	 * +- stores
+	 * |  +─ keystore.jks
+	 * +- <em>data</em> -&gt; stores
+	 * +─ <em>keystore.jks</em> -&gt; data/keystore.jks
+	 * </pre> the resulting paths would include:
+	 * <p>
+	 * <ul>
+	 * <li>{@code keystore.jks}</li>
+	 * <li>{@code data/keystore.jks}</li>
+	 * <li>{@code data}</li>
+	 * <li>{@code stores/keystore.jks}</li>
+	 * </ul>
+	 * @param paths the source paths
+	 * @return all possible {@link Path} instances to be registered
+	 * @throws IOException if an I/O error occurs
+	 */
+	private Set<Path> getRegistrationPaths(Set<Path> paths) throws IOException {
+		Set<Path> result = new HashSet<>();
+		for (Path path : paths) {
+			collectRegistrationPaths(path, result);
 		}
-		return path;
+		return Collections.unmodifiableSet(result);
+	}
+
+	private void collectRegistrationPaths(Path path, Set<Path> result) throws IOException {
+		path = path.toAbsolutePath();
+		result.add(path);
+		Path parent = path.getParent();
+		if (parent != null && Files.isSymbolicLink(parent)) {
+			result.add(parent);
+			collectRegistrationPaths(resolveSiblingSymbolicLink(parent).resolve(path.getFileName()), result);
+		}
+		else if (Files.isSymbolicLink(path)) {
+			collectRegistrationPaths(resolveSiblingSymbolicLink(path), result);
+		}
+	}
+
+	private Path resolveSiblingSymbolicLink(Path path) throws IOException {
+		return path.resolveSibling(Files.readSymbolicLink(path));
 	}
 
 	@Override
@@ -145,11 +179,15 @@ class FileWatcher implements Closeable {
 		}
 
 		void register(Registration registration) throws IOException {
+			Set<Path> directories = new HashSet<>();
 			for (Path path : registration.paths()) {
 				if (!Files.isRegularFile(path) && !Files.isDirectory(path)) {
 					throw new IOException("'%s' is neither a file nor a directory".formatted(path));
 				}
 				Path directory = Files.isDirectory(path) ? path : path.getParent();
+				directories.add(directory);
+			}
+			for (Path directory : directories) {
 				WatchKey watchKey = register(directory);
 				this.registrations.computeIfAbsent(watchKey, (key) -> new CopyOnWriteArrayList<>()).add(registration);
 			}
@@ -221,12 +259,11 @@ class FileWatcher implements Closeable {
 
 	/**
 	 * An individual watch registration.
+	 *
+	 * @param paths the paths being registered
+	 * @param action the action to take
 	 */
 	private record Registration(Set<Path> paths, Runnable action) {
-
-		Registration {
-			paths = paths.stream().map(Path::toAbsolutePath).collect(Collectors.toSet());
-		}
 
 		boolean manages(Path file) {
 			Path absolutePath = file.toAbsolutePath();
@@ -236,6 +273,7 @@ class FileWatcher implements Closeable {
 		private boolean isInDirectories(Path file) {
 			return this.paths.stream().filter(Files::isDirectory).anyMatch(file::startsWith);
 		}
+
 	}
 
 }

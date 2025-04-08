@@ -24,7 +24,6 @@ import io.micrometer.registry.otlp.HistogramFlavor;
 
 import org.springframework.boot.actuate.autoconfigure.metrics.export.properties.StepRegistryProperties;
 import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.boot.context.properties.DeprecatedConfigurationProperty;
 
 /**
  * {@link ConfigurationProperties @ConfigurationProperties} for configuring OTLP metrics
@@ -40,18 +39,13 @@ public class OtlpMetricsProperties extends StepRegistryProperties {
 	/**
 	 * URI of the OTLP server.
 	 */
-	private String url = "http://localhost:4318/v1/metrics";
+	private String url;
 
 	/**
 	 * Aggregation temporality of sums. It defines the way additive values are expressed.
 	 * This setting depends on the backend you use, some only support one temporality.
 	 */
 	private AggregationTemporality aggregationTemporality = AggregationTemporality.CUMULATIVE;
-
-	/**
-	 * Monitored resource's attributes.
-	 */
-	private Map<String, String> resourceAttributes;
 
 	/**
 	 * Headers for the exported metrics.
@@ -93,17 +87,6 @@ public class OtlpMetricsProperties extends StepRegistryProperties {
 
 	public void setAggregationTemporality(AggregationTemporality aggregationTemporality) {
 		this.aggregationTemporality = aggregationTemporality;
-	}
-
-	@Deprecated(since = "3.2.0", forRemoval = true)
-	@DeprecatedConfigurationProperty(replacement = "management.opentelemetry.resource-attributes", since = "3.2.0")
-	public Map<String, String> getResourceAttributes() {
-		return this.resourceAttributes;
-	}
-
-	@Deprecated(since = "3.2.0", forRemoval = true)
-	public void setResourceAttributes(Map<String, String> resourceAttributes) {
-		this.resourceAttributes = resourceAttributes;
 	}
 
 	public Map<String, String> getHeaders() {

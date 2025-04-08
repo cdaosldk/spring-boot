@@ -25,6 +25,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
+import org.springframework.aot.hint.RuntimeHints;
+import org.springframework.aot.hint.predicate.RuntimeHintsPredicates;
 import org.springframework.beans.factory.BeanCreationException;
 import org.springframework.boot.ApplicationContextFactory;
 import org.springframework.boot.SpringApplication;
@@ -41,6 +43,7 @@ import org.springframework.core.env.PropertySource;
 import org.springframework.core.env.StandardEnvironment;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ApplicationContextFailureProcessor;
+import org.springframework.test.context.BootstrapUtils;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.ContextHierarchy;
 import org.springframework.test.context.MergedContextConfiguration;
@@ -53,6 +56,8 @@ import org.springframework.web.context.WebApplicationContext;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
+import static org.mockito.BDDMockito.then;
+import static org.mockito.Mockito.mock;
 
 /**
  * Tests for {@link SpringBootContextLoader}
@@ -242,6 +247,29 @@ class SpringBootContextLoaderTests {
 		assertThatIllegalStateException().isThrownBy(testContext::getApplicationContext)
 			.havingCause()
 			.withMessage("UseMainMethod.ALWAYS cannot be used with @ContextHierarchy tests");
+	}
+
+	@Test
+	void whenMainMethodNotAvailableReturnsNoAotContribution() throws Exception {
+		SpringBootContextLoader contextLoader = new SpringBootContextLoader();
+		MergedContextConfiguration contextConfiguration = BootstrapUtils
+			.resolveTestContextBootstrapper(UseMainMethodWhenAvailableAndNoMainMethod.class)
+			.buildMergedContextConfiguration();
+		RuntimeHints runtimeHints = mock(RuntimeHints.class);
+		contextLoader.loadContextForAotProcessing(contextConfiguration, runtimeHints);
+		then(runtimeHints).shouldHaveNoInteractions();
+	}
+
+	@Test
+	void whenMainMethodPresentRegisterReflectionHints() throws Exception {
+		SpringBootContextLoader contextLoader = new SpringBootContextLoader();
+		MergedContextConfiguration contextConfiguration = BootstrapUtils
+			.resolveTestContextBootstrapper(UseMainMethodWhenAvailableAndMainMethod.class)
+			.buildMergedContextConfiguration();
+		RuntimeHints runtimeHints = new RuntimeHints();
+		contextLoader.loadContextForAotProcessing(contextConfiguration, runtimeHints);
+		assertThat(RuntimeHintsPredicates.reflection().onMethod(ConfigWithMain.class, "main").invoke())
+			.accepts(runtimeHints);
 	}
 
 	@Test

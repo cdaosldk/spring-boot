@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2024 the original author or authors.
+ * Copyright 2012-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -57,10 +57,13 @@ import org.springframework.boot.sql.init.DatabaseInitializationMode;
 import org.springframework.boot.sql.init.DatabaseInitializationSettings;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.boot.testsupport.assertj.SimpleAsyncTaskExecutorAssert;
+import org.springframework.boot.testsupport.classpath.resources.WithResource;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
 import org.springframework.core.task.SimpleAsyncTaskExecutor;
+import org.springframework.core.task.SyncTaskExecutor;
+import org.springframework.core.task.TaskExecutor;
 import org.springframework.integration.annotation.IntegrationComponentScan;
 import org.springframework.integration.annotation.MessagingGateway;
 import org.springframework.integration.annotation.ServiceActivator;
@@ -104,6 +107,7 @@ import static org.mockito.Mockito.mock;
  * @author Stephane Nicoll
  * @author Vedran Pavic
  * @author Yong-Hyun Kim
+ * @author Yanming Zhou
  */
 class IntegrationAutoConfigurationTests {
 
@@ -378,6 +382,8 @@ class IntegrationAutoConfigurationTests {
 	}
 
 	@Test
+	@WithResource(name = "META-INF/spring.integration.properties",
+			content = "spring.integration.endpoints.noAutoStartup=testService*")
 	void integrationGlobalPropertiesFromSpringIntegrationPropertiesFile() {
 		this.contextRunner
 			.withPropertyValues("spring.integration.channel.auto-create=false",
@@ -540,6 +546,19 @@ class IntegrationAutoConfigurationTests {
 					.usesVirtualThreads()));
 	}
 
+	@Test
+	void pollerMetadataCanBeCustomizedViaPollerMetadataCustomizer() {
+		TaskExecutor taskExecutor = new SyncTaskExecutor();
+		this.contextRunner.withUserConfiguration(PollingConsumerConfiguration.class)
+			.withBean(PollerMetadataCustomizer.class,
+					() -> (pollerMetadata) -> pollerMetadata.setTaskExecutor(taskExecutor))
+			.run((context) -> {
+				assertThat(context).hasSingleBean(PollerMetadata.class);
+				PollerMetadata metadata = context.getBean(PollerMetadata.DEFAULT_POLLER, PollerMetadata.class);
+				assertThat(metadata.getTaskExecutor()).isSameAs(taskExecutor);
+			});
+	}
+
 	@Configuration(proxyBeanMethods = false)
 	static class CustomMBeanExporter {
 
@@ -558,7 +577,7 @@ class IntegrationAutoConfigurationTests {
 	}
 
 	@MessagingGateway
-	interface TestGateway extends RequestReplyExchanger {
+	public interface TestGateway extends RequestReplyExchanger {
 
 	}
 

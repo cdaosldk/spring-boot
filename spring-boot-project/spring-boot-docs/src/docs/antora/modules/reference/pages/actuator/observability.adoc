@@ -96,10 +96,18 @@ Spring Boot's actuator module includes basic support for OpenTelemetry.
 It provides a bean of type javadoc:io.opentelemetry.api.OpenTelemetry[], and if there are beans of type javadoc:io.opentelemetry.sdk.trace.SdkTracerProvider[], javadoc:io.opentelemetry.context.propagation.ContextPropagators[], javadoc:io.opentelemetry.sdk.logs.SdkLoggerProvider[] or javadoc:io.opentelemetry.sdk.metrics.SdkMeterProvider[] in the application context, they automatically get registered.
 Additionally, it provides a javadoc:io.opentelemetry.sdk.resources.Resource[] bean.
 The attributes of the auto-configured javadoc:io.opentelemetry.sdk.resources.Resource[] can be configured via the configprop:management.opentelemetry.resource-attributes[] configuration property.
+Auto-configured attributes will be merged with attributes from the `OTEL_RESOURCE_ATTRIBUTES` and `OTEL_SERVICE_NAME` environment variables, with attributes configured through the configuration property taking precedence over those from the environment variables.
+
+
 If you have defined your own javadoc:io.opentelemetry.sdk.resources.Resource[] bean, this will no longer be the case.
 
 NOTE: Spring Boot does not provide auto-configuration for OpenTelemetry metrics or logging.
 OpenTelemetry tracing is only auto-configured when used together with xref:actuator/tracing.adoc[Micrometer Tracing].
+
+NOTE: The `OTEL_RESOURCE_ATTRIBUTES` environment variable consists of a list of key-value pairs.
+For example: `key1=value1,key2=value2,key3=spring%20boot`.
+All attribute values are treated as strings, and any characters outside the baggage-octet range must be **percent-encoded**.
+
 
 The next sections will provide more details about logging, metrics and traces.
 
@@ -108,9 +116,9 @@ The next sections will provide more details about logging, metrics and traces.
 [[actuator.observability.annotations]]
 == Micrometer Observation Annotations support
 
-To enable scanning of observability annotations like javadoc:io.micrometer.observation.annotation.Observed[format=annotation], javadoc:io.micrometer.core.annotation.Timed[format=annotation], javadoc:io.micrometer.core.annotation.Counted[format=annotation], javadoc:io.micrometer.core.aop.MeterTag[format=annotation] and javadoc:io.micrometer.tracing.annotation.NewSpan[format=annotation] annotations, you need to set the configprop:management.observations.annotations.enabled[] property to `true`.
+To enable scanning of observability annotations like javadoc:io.micrometer.observation.annotation.Observed[format=annotation], javadoc:io.micrometer.core.annotation.Timed[format=annotation], javadoc:io.micrometer.core.annotation.Counted[format=annotation], javadoc:io.micrometer.core.aop.MeterTag[format=annotation] and javadoc:io.micrometer.tracing.annotation.NewSpan[format=annotation], you need to set the configprop:management.observations.annotations.enabled[] property to `true`.
 This feature is supported by Micrometer directly.
 Please refer to the {url-micrometer-docs-concepts}/timers.html#_the_timed_annotation[Micrometer], {url-micrometer-docs-observation}/components.html#micrometer-observation-annotations[Micrometer Observation] and {url-micrometer-tracing-docs}/api.html#_aspect_oriented_programming[Micrometer Tracing] reference docs.
 
-NOTE: When you annotate methods or classes which are already instrumented (for example xref:reference:actuator/metrics.adoc#actuator.metrics.supported.spring-data-repository[Spring Data repositories] or xref:reference:actuator/metrics.adoc#actuator.metrics.supported.spring-mvc[Spring MVC controllers]), you will get duplicate observations.
-In that case you can either disable the automatic instrumentation using xref:reference:actuator/observability.adoc#actuator.observability.preventing-observations[properties] or an javadoc:io.micrometer.observation.ObservationPredicate[] and rely on your annotations, or you can remove your annotation.
+NOTE: When you annotate methods or classes which are already instrumented (for example, xref:reference:actuator/metrics.adoc#actuator.metrics.supported.spring-data-repository[Spring Data repositories] or xref:reference:actuator/metrics.adoc#actuator.metrics.supported.spring-mvc[Spring MVC controllers]), you will get duplicate observations.
+In that case you can either disable the automatic instrumentation using xref:reference:actuator/observability.adoc#actuator.observability.preventing-observations[properties] or an javadoc:io.micrometer.observation.ObservationPredicate[] and rely on your annotations, or you can remove your annotations.

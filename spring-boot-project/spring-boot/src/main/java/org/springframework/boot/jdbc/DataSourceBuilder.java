@@ -41,7 +41,6 @@ import org.vibur.dbcp.ViburDBCPDataSource;
 import org.springframework.beans.BeanUtils;
 import org.springframework.core.ResolvableType;
 import org.springframework.jdbc.datasource.SimpleDriverDataSource;
-import org.springframework.jdbc.datasource.embedded.EmbeddedDatabase;
 import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
 import org.springframework.util.ReflectionUtils;
@@ -192,7 +191,10 @@ public final class DataSourceBuilder<T extends DataSource> {
 				&& applied.contains(DataSourceProperty.URL)) {
 			String url = properties.get(dataSource, DataSourceProperty.URL);
 			DatabaseDriver driver = DatabaseDriver.fromJdbcUrl(url);
-			properties.set(dataSource, DataSourceProperty.DRIVER_CLASS_NAME, driver.getDriverClassName());
+			String driverClassName = driver.getDriverClassName();
+			if (driverClassName != null) {
+				properties.set(dataSource, DataSourceProperty.DRIVER_CLASS_NAME, driver.getDriverClassName());
+			}
 		}
 		return dataSource;
 	}
@@ -233,14 +235,6 @@ public final class DataSourceBuilder<T extends DataSource> {
 	 * @since 2.5.0
 	 */
 	public static DataSourceBuilder<?> derivedFrom(DataSource dataSource) {
-		if (dataSource instanceof EmbeddedDatabase) {
-			try {
-				dataSource = dataSource.unwrap(DataSource.class);
-			}
-			catch (SQLException ex) {
-				throw new IllegalStateException("Unable to unwrap embedded database", ex);
-			}
-		}
 		return new DataSourceBuilder<>(unwrap(dataSource));
 	}
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2024 the original author or authors.
+ * Copyright 2012-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -120,7 +120,7 @@ public abstract class TotalProgressListener<E extends ImageProgressUpdateEvent> 
 		}
 
 		int getProgress() {
-			return withinPercentageBounds((this.progressByStatus.values().stream().mapToInt(Integer::valueOf).sum())
+			return withinPercentageBounds((this.progressByStatus.values().stream().mapToInt(Integer::intValue).sum())
 					/ this.progressByStatus.size());
 		}
 

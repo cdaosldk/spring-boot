@@ -57,12 +57,14 @@ import org.springframework.boot.autoconfigure.web.servlet.WebMvcAutoConfiguratio
 import org.springframework.boot.test.context.assertj.AssertableWebApplicationContext;
 import org.springframework.boot.test.context.runner.ContextConsumer;
 import org.springframework.boot.test.context.runner.WebApplicationContextRunner;
+import org.springframework.boot.testsupport.classpath.resources.WithResource;
 import org.springframework.boot.web.embedded.tomcat.TomcatServletWebServerFactory;
 import org.springframework.boot.web.server.WebServerFactoryCustomizerBeanPostProcessor;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.boot.web.servlet.ServletRegistrationBean;
 import org.springframework.boot.web.servlet.context.AnnotationConfigServletWebServerApplicationContext;
 import org.springframework.boot.web.servlet.filter.OrderedFormContentFilter;
+import org.springframework.boot.web.servlet.server.MockServletWebServerFactory;
 import org.springframework.boot.web.servlet.server.ServletWebServerFactory;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
@@ -691,6 +693,7 @@ class WebMvcAutoConfigurationTests {
 	}
 
 	@Test
+	@WithResource(name = "welcome-page/index.html", content = "welcome-page-static")
 	void welcomePageHandlerMappingIsAutoConfigured() {
 		this.contextRunner.withPropertyValues("spring.web.resources.static-locations:classpath:/welcome-page/")
 			.run((context) -> {
@@ -701,6 +704,7 @@ class WebMvcAutoConfigurationTests {
 	}
 
 	@Test
+	@WithResource(name = "welcome-page/index.html", content = "welcome-page-static")
 	void welcomePageHandlerIncludesCorsConfiguration() {
 		this.contextRunner.withPropertyValues("spring.web.resources.static-locations:classpath:/welcome-page/")
 			.withUserConfiguration(CorsConfigurer.class)

@@ -39,6 +39,7 @@ import org.testcontainers.couchbase.CouchbaseContainer;
 import org.testcontainers.elasticsearch.ElasticsearchContainer;
 import org.testcontainers.grafana.LgtmStackContainer;
 import org.testcontainers.kafka.ConfluentKafkaContainer;
+import org.testcontainers.ldap.LLdapContainer;
 import org.testcontainers.redpanda.RedpandaContainer;
 import org.testcontainers.utility.DockerImageName;
 
@@ -86,7 +87,7 @@ public enum TestImage {
 	/**
 	 * A container image suitable for testing Cassandra using the deprecated
 	 * {@link org.testcontainers.containers.CassandraContainer}.
-	 * @deprecated since 3.4.0 for removal in 3.6.0 in favor of {@link #CASSANDRA}
+	 * @deprecated since 3.4.0 for removal in 4.0.0 in favor of {@link #CASSANDRA}
 	 */
 	@SuppressWarnings("deprecation")
 	@Deprecated(since = "3.4.0", forRemoval = true)
@@ -109,7 +110,7 @@ public enum TestImage {
 	/**
 	 * A container image suitable for testing Elasticsearch 7.
 	 */
-	ELASTICSEARCH("docker.elastic.co/elasticsearch/elasticsearch", "7.17.5", () -> ElasticsearchContainer.class,
+	ELASTICSEARCH("docker.elastic.co/elasticsearch/elasticsearch", "7.17.28", () -> ElasticsearchContainer.class,
 			(container) -> ((ElasticsearchContainer) container).withEnv("ES_JAVA_OPTS", "-Xms32m -Xmx512m")
 				.withStartupAttempts(5)
 				.withStartupTimeout(Duration.ofMinutes(10))),
@@ -128,7 +129,7 @@ public enum TestImage {
 	/**
 	 * A container image suitable for testing Hazelcast.
 	 */
-	HAZELCAST("hazelcast/hazelcast", "5.5.0-slim", () -> HazelcastContainer.class),
+	HAZELCAST("hazelcast/hazelcast", "5.5.0-slim-jdk17", () -> HazelcastContainer.class),
 
 	/**
 	 * A container image suitable for testing Confluent's distribution of Kafka.
@@ -138,12 +139,17 @@ public enum TestImage {
 	/**
 	 * A container image suitable for testing Confluent's distribution of Kafka using the
 	 * deprecated {@link org.testcontainers.containers.KafkaContainer}.
-	 * @deprecated since 3.4.0 for removal in 3.6.0 in favor of {@link #CONFLUENT_KAFKA}
+	 * @deprecated since 3.4.0 for removal in 4.0.0 in favor of {@link #CONFLUENT_KAFKA}
 	 */
 	@SuppressWarnings("deprecation")
 	@Deprecated(since = "3.4.0", forRemoval = true)
 	CONFLUENT_KAFKA_DEPRECATED("confluentinc/cp-kafka", "7.4.0",
 			() -> org.testcontainers.containers.KafkaContainer.class),
+
+	/**
+	 * A container image suitable for testing LLDAP.
+	 */
+	LLDAP("lldap/lldap", "v0.6.1-alpine", () -> LLdapContainer.class),
 
 	/**
 	 * A container image suitable for testing OpenLDAP.
@@ -175,14 +181,14 @@ public enum TestImage {
 	/**
 	 * A container image suitable for testing Neo4j.
 	 */
-	NEO4J("neo4j", "4.4.11", () -> Neo4jContainer.class,
+	NEO4J("neo4j", "4.4.41", () -> Neo4jContainer.class,
 			(container) -> ((Neo4jContainer<?>) container).withStartupAttempts(5)
 				.withStartupTimeout(Duration.ofMinutes(10))),
 
 	/**
 	 * A container image suitable for testing Oracle Free.
 	 */
-	ORACLE_FREE("gvenzl/oracle-free", "23.3-slim", () -> org.testcontainers.oracle.OracleContainer.class,
+	ORACLE_FREE("gvenzl/oracle-free", "23.6-slim", () -> org.testcontainers.oracle.OracleContainer.class,
 			(container) -> ((org.testcontainers.oracle.OracleContainer) container)
 				.withStartupTimeout(Duration.ofMinutes(2))),
 

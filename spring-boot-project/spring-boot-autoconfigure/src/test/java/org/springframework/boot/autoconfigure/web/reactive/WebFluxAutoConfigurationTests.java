@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2024 the original author or authors.
+ * Copyright 2012-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -57,9 +57,11 @@ import org.springframework.boot.autoconfigure.web.reactive.WebFluxAutoConfigurat
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.boot.test.context.runner.ContextConsumer;
 import org.springframework.boot.test.context.runner.ReactiveWebApplicationContextRunner;
+import org.springframework.boot.testsupport.classpath.resources.WithResource;
 import org.springframework.boot.web.codec.CodecCustomizer;
 import org.springframework.boot.web.reactive.context.ReactiveWebApplicationContext;
 import org.springframework.boot.web.reactive.filter.OrderedHiddenHttpMethodFilter;
+import org.springframework.boot.web.reactive.server.MockReactiveWebServerFactory;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -530,6 +532,7 @@ class WebFluxAutoConfigurationTests {
 	}
 
 	@Test
+	@WithResource(name = "welcome-page/index.html", content = "welcome-page-static")
 	void welcomePageHandlerMapping() {
 		this.contextRunner.withPropertyValues("spring.web.resources.static-locations=classpath:/welcome-page/")
 			.run((context) -> {
@@ -670,6 +673,15 @@ class WebFluxAutoConfigurationTests {
 				assertThat(cookies).allMatch((cookie) -> !cookie.isSecure());
 				assertThat(cookies).allMatch((cookie) -> cookie.getSameSite().equals("Strict"));
 				assertThat(cookies).allMatch(ResponseCookie::isPartitioned);
+			}));
+	}
+
+	@Test
+	void sessionCookieOmittedConfigurationShouldBeApplied() {
+		this.contextRunner.withPropertyValues("server.reactive.session.cookie.same-site:omitted")
+			.run(assertExchangeWithSession((exchange) -> {
+				List<ResponseCookie> cookies = exchange.getResponse().getCookies().get("SESSION");
+				assertThat(cookies).extracting(ResponseCookie::getSameSite).containsOnlyNulls();
 			}));
 	}
 

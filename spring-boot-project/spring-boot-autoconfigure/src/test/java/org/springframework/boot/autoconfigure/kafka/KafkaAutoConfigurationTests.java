@@ -45,6 +45,9 @@ import org.junit.jupiter.api.condition.JRE;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import org.springframework.aot.hint.MemberCategory;
+import org.springframework.aot.hint.RuntimeHints;
+import org.springframework.aot.hint.predicate.RuntimeHintsPredicates;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.autoconfigure.ssl.SslAutoConfiguration;
 import org.springframework.boot.ssl.SslBundle;
@@ -53,6 +56,7 @@ import org.springframework.boot.test.context.assertj.AssertableApplicationContex
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.boot.test.context.runner.ContextConsumer;
 import org.springframework.boot.testsupport.assertj.SimpleAsyncTaskExecutorAssert;
+import org.springframework.boot.testsupport.classpath.resources.WithResource;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.task.AsyncTaskExecutor;
@@ -111,6 +115,7 @@ import static org.mockito.Mockito.never;
  * @author Andy Wilkinson
  * @author Phillip Webb
  * @author Scott Frederick
+ * @author Yanming Zhou
  */
 class KafkaAutoConfigurationTests {
 
@@ -118,6 +123,8 @@ class KafkaAutoConfigurationTests {
 		.withConfiguration(AutoConfigurations.of(KafkaAutoConfiguration.class, SslAutoConfiguration.class));
 
 	@Test
+	@WithResource(name = "ksLoc")
+	@WithResource(name = "tsLoc")
 	void consumerProperties() {
 		this.contextRunner.withPropertyValues("spring.kafka.bootstrap-servers=foo:1234",
 				"spring.kafka.properties.foo=bar", "spring.kafka.properties.baz=qux",
@@ -126,8 +133,9 @@ class KafkaAutoConfigurationTests {
 				"spring.kafka.ssl.key-store-type=PKCS12", "spring.kafka.ssl.trust-store-location=classpath:tsLoc",
 				"spring.kafka.ssl.trust-store-password=p3", "spring.kafka.ssl.trust-store-type=PKCS12",
 				"spring.kafka.ssl.protocol=TLSv1.2", "spring.kafka.consumer.auto-commit-interval=123",
-				"spring.kafka.consumer.max-poll-records=42", "spring.kafka.consumer.auto-offset-reset=earliest",
-				"spring.kafka.consumer.client-id=ccid", // test override common
+				"spring.kafka.consumer.max-poll-records=42", "spring.kafka.consumer.max-poll-interval=30s",
+				"spring.kafka.consumer.auto-offset-reset=earliest", "spring.kafka.consumer.client-id=ccid",
+				// test override common
 				"spring.kafka.consumer.enable-auto-commit=false", "spring.kafka.consumer.fetch-max-wait=456",
 				"spring.kafka.consumer.properties.fiz.buz=fix.fox", "spring.kafka.consumer.fetch-min-size=1KB",
 				"spring.kafka.consumer.group-id=bar", "spring.kafka.consumer.heartbeat-interval=234",
@@ -166,6 +174,7 @@ class KafkaAutoConfigurationTests {
 				assertThat(configs).containsEntry(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG,
 						IntegerDeserializer.class);
 				assertThat(configs).containsEntry(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, 42);
+				assertThat(configs).containsEntry(ConsumerConfig.MAX_POLL_INTERVAL_MS_CONFIG, 30000);
 				assertThat(configs).containsEntry("foo", "bar");
 				assertThat(configs).containsEntry("baz", "qux");
 				assertThat(configs).containsEntry("foo.bar.baz", "qux.fiz.buz");
@@ -216,13 +225,14 @@ class KafkaAutoConfigurationTests {
 			assertThat(context).hasSingleBean(KafkaConnectionDetails.class);
 			DefaultKafkaConsumerFactory<?, ?> consumerFactory = context.getBean(DefaultKafkaConsumerFactory.class);
 			Map<String, Object> configs = consumerFactory.getConfigurationProperties();
-			assertThat(configs).containsEntry("ssl.engine.factory.class",
-					"org.springframework.boot.autoconfigure.kafka.SslBundleSslEngineFactory");
+			assertThat(configs).containsEntry("ssl.engine.factory.class", SslBundleSslEngineFactory.class);
 			assertThat(configs).containsEntry("org.springframework.boot.ssl.SslBundle", sslBundle);
 		});
 	}
 
 	@Test
+	@WithResource(name = "ksLocP")
+	@WithResource(name = "tsLocP")
 	void producerProperties() {
 		this.contextRunner.withPropertyValues("spring.kafka.clientId=cid",
 				"spring.kafka.properties.foo.bar.baz=qux.fiz.buz", "spring.kafka.producer.acks=all",
@@ -310,13 +320,14 @@ class KafkaAutoConfigurationTests {
 			assertThat(context).hasSingleBean(KafkaConnectionDetails.class);
 			DefaultKafkaProducerFactory<?, ?> producerFactory = context.getBean(DefaultKafkaProducerFactory.class);
 			Map<String, Object> configs = producerFactory.getConfigurationProperties();
-			assertThat(configs).containsEntry("ssl.engine.factory.class",
-					"org.springframework.boot.autoconfigure.kafka.SslBundleSslEngineFactory");
+			assertThat(configs).containsEntry("ssl.engine.factory.class", SslBundleSslEngineFactory.class);
 			assertThat(configs).containsEntry("org.springframework.boot.ssl.SslBundle", sslBundle);
 		});
 	}
 
 	@Test
+	@WithResource(name = "ksLocP")
+	@WithResource(name = "tsLocP")
 	void adminProperties() {
 		this.contextRunner
 			.withPropertyValues("spring.kafka.clientId=cid", "spring.kafka.properties.foo.bar.baz=qux.fiz.buz",
@@ -394,14 +405,15 @@ class KafkaAutoConfigurationTests {
 			assertThat(context).hasSingleBean(KafkaConnectionDetails.class);
 			KafkaAdmin admin = context.getBean(KafkaAdmin.class);
 			Map<String, Object> configs = admin.getConfigurationProperties();
-			assertThat(configs).containsEntry("ssl.engine.factory.class",
-					"org.springframework.boot.autoconfigure.kafka.SslBundleSslEngineFactory");
+			assertThat(configs).containsEntry("ssl.engine.factory.class", SslBundleSslEngineFactory.class);
 			assertThat(configs).containsEntry("org.springframework.boot.ssl.SslBundle", sslBundle);
 		});
 	}
 
-	@SuppressWarnings("unchecked")
 	@Test
+	@SuppressWarnings("unchecked")
+	@WithResource(name = "ksLocP")
+	@WithResource(name = "tsLocP")
 	void streamsProperties() {
 		this.contextRunner.withUserConfiguration(EnableKafkaStreamsConfiguration.class)
 			.withPropertyValues("spring.kafka.client-id=cid",
@@ -490,8 +502,7 @@ class KafkaAutoConfigurationTests {
 					.getBean(KafkaStreamsDefaultConfiguration.DEFAULT_STREAMS_CONFIG_BEAN_NAME,
 							KafkaStreamsConfiguration.class)
 					.asProperties();
-				assertThat(configs).containsEntry("ssl.engine.factory.class",
-						"org.springframework.boot.autoconfigure.kafka.SslBundleSslEngineFactory");
+				assertThat(configs).containsEntry("ssl.engine.factory.class", SslBundleSslEngineFactory.class);
 				assertThat(configs).containsEntry("org.springframework.boot.ssl.SslBundle", sslBundle);
 			});
 	}
@@ -994,6 +1005,15 @@ class KafkaAutoConfigurationTests {
 				Map<String, Object> configs = admin.getConfigurationProperties();
 				assertThat(configs).containsEntry(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG, "PLAINTEXT");
 			});
+	}
+
+	@Test
+	void shouldRegisterRuntimeHints() {
+		RuntimeHints runtimeHints = new RuntimeHints();
+		new KafkaAutoConfiguration.KafkaRuntimeHints().registerHints(runtimeHints, getClass().getClassLoader());
+		assertThat(RuntimeHintsPredicates.reflection()
+			.onType(SslBundleSslEngineFactory.class)
+			.withMemberCategories(MemberCategory.INVOKE_PUBLIC_CONSTRUCTORS)).accepts(runtimeHints);
 	}
 
 	private KafkaConnectionDetails kafkaConnectionDetails() {
