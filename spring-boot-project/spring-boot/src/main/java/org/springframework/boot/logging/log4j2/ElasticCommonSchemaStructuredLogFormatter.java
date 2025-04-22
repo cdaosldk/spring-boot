@@ -28,9 +28,10 @@ import org.apache.logging.log4j.core.time.Instant;
 import org.apache.logging.log4j.util.ReadOnlyStringMap;
 
 import org.springframework.boot.json.JsonWriter;
-import org.springframework.boot.json.JsonWriter.Members;
 import org.springframework.boot.logging.StackTracePrinter;
 import org.springframework.boot.logging.structured.CommonStructuredLogFormat;
+import org.springframework.boot.logging.structured.ContextPairs;
+import org.springframework.boot.logging.structured.ContextPairs.Pairs;
 import org.springframework.boot.logging.structured.ElasticCommonSchemaProperties;
 import org.springframework.boot.logging.structured.JsonWriterStructuredLogFormatter;
 import org.springframework.boot.logging.structured.StructuredLogFormatter;
@@ -48,42 +49,46 @@ import org.springframework.util.ObjectUtils;
 class ElasticCommonSchemaStructuredLogFormatter extends JsonWriterStructuredLogFormatter<LogEvent> {
 
 	ElasticCommonSchemaStructuredLogFormatter(Environment environment, StackTracePrinter stackTracePrinter,
-			StructuredLoggingJsonMembersCustomizer<?> customizer) {
-		super((members) -> jsonMembers(environment, stackTracePrinter, members), customizer);
+			ContextPairs contextPairs, StructuredLoggingJsonMembersCustomizer<?> customizer) {
+		super((members) -> jsonMembers(environment, stackTracePrinter, contextPairs, members), customizer);
 	}
 
 	private static void jsonMembers(Environment environment, StackTracePrinter stackTracePrinter,
-			JsonWriter.Members<LogEvent> members) {
+			ContextPairs contextPairs, JsonWriter.Members<LogEvent> members) {
 		Extractor extractor = new Extractor(stackTracePrinter);
 		members.add("@timestamp", LogEvent::getInstant).as(ElasticCommonSchemaStructuredLogFormatter::asTimestamp);
-		members.add("log.level", LogEvent::getLevel).as(Level::name);
-		members.add("process.pid", environment.getProperty("spring.application.pid", Long.class))
-			.when(Objects::nonNull);
-		members.add("process.thread.name", LogEvent::getThreadName);
+		members.add("log").usingMembers((log) -> {
+			log.add("level", LogEvent::getLevel).as(Level::name);
+			log.add("logger", LogEvent::getLoggerName);
+		});
+		members.add("process").usingMembers((process) -> {
+			process.add("pid", environment.getProperty("spring.application.pid", Long.class)).when(Objects::nonNull);
+			process.add("thread").usingMembers((thread) -> thread.add("name", LogEvent::getThreadName));
+		});
 		ElasticCommonSchemaProperties.get(environment).jsonMembers(members);
-		members.add("log.logger", LogEvent::getLoggerName);
 		members.add("message", LogEvent::getMessage).as(StructuredMessage::get);
 		members.from(LogEvent::getContextData)
-			.whenNot(ReadOnlyStringMap::isEmpty)
-			.usingPairs((contextData, pairs) -> contextData.forEach(pairs::accept));
-		members.from(LogEvent::getThrownProxy)
-			.whenNotNull()
-			.usingMembers((thrownProxyMembers) -> throwableMembers(thrownProxyMembers, extractor));
+			.usingPairs(contextPairs.nested(ElasticCommonSchemaStructuredLogFormatter::addContextDataPairs));
+		members.from(LogEvent::getThrownProxy).whenNotNull().usingMembers((thrownProxyMembers) -> {
+			thrownProxyMembers.add("error").usingMembers((error) -> {
+				error.add("type", ThrowableProxy::getThrowable).whenNotNull().as(ObjectUtils::nullSafeClassName);
+				error.add("message", ThrowableProxy::getMessage);
+				error.add("stack_trace", extractor::stackTrace);
+			});
+		});
 		members.add("tags", LogEvent::getMarker)
 			.whenNotNull()
 			.as(ElasticCommonSchemaStructuredLogFormatter::getMarkers)
 			.whenNotEmpty();
-		members.add("ecs.version", "8.11");
+		members.add("ecs").usingMembers((ecs) -> ecs.add("version", "8.11"));
+	}
+
+	private static void addContextDataPairs(Pairs<ReadOnlyStringMap> contextPairs) {
+		contextPairs.add((contextData, pairs) -> contextData.forEach(pairs::accept));
 	}
 
 	private static java.time.Instant asTimestamp(Instant instant) {
 		return java.time.Instant.ofEpochMilli(instant.getEpochMillisecond()).plusNanos(instant.getNanoOfMillisecond());
-	}
-
-	private static void throwableMembers(Members<ThrowableProxy> members, Extractor extractor) {
-		members.add("error.type", ThrowableProxy::getThrowable).whenNotNull().as(ObjectUtils::nullSafeClassName);
-		members.add("error.message", ThrowableProxy::getMessage);
-		members.add("error.stack_trace", extractor::stackTrace);
 	}
 
 	private static Set<String> getMarkers(Marker marker) {

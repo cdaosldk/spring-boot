@@ -47,15 +47,6 @@ public abstract class AbstractHttpRequestFactoryProperties extends AbstractHttpC
 	}
 
 	/**
-	 * Return a {@link ClientHttpRequestFactoryBuilder} based on the properties.
-	 * @return a {@link ClientHttpRequestFactoryBuilder}
-	 */
-	protected final ClientHttpRequestFactoryBuilder<?> factoryBuilder() {
-		Factory factory = getFactory();
-		return (factory != null) ? factory.builder() : ClientHttpRequestFactoryBuilder.detect();
-	}
-
-	/**
 	 * Supported factory types.
 	 */
 	public enum Factory {

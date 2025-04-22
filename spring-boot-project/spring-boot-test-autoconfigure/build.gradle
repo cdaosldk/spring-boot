@@ -106,9 +106,7 @@ dependencies {
 	testImplementation("org.eclipse:yasson")
 	testImplementation("org.hibernate.validator:hibernate-validator")
 	testImplementation("org.hsqldb:hsqldb")
-	testImplementation("org.jooq:jooq") {
-		exclude group: "javax.xml.bind", module: "jaxb-api"
-	}
+	testImplementation("org.jooq:jooq")
 	testImplementation("org.junit.jupiter:junit-jupiter")
 	testImplementation("org.junit.platform:junit-platform-engine")
 	testImplementation("org.junit.platform:junit-platform-launcher")
@@ -135,7 +133,7 @@ test {
 	include "**/*Tests.class"
 }
 
-task testSliceMetadata(type: org.springframework.boot.build.test.autoconfigure.TestSliceMetadata) {
+tasks.register("testSliceMetadata", org.springframework.boot.build.test.autoconfigure.TestSliceMetadata) {
 	sourceSet = sourceSets.main
 	outputFile = layout.buildDirectory.file("test-slice-metadata.properties")
 }

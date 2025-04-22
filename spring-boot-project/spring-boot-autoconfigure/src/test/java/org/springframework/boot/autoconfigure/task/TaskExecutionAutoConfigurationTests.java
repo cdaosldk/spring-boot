@@ -81,10 +81,12 @@ class TaskExecutionAutoConfigurationTests {
 	void simpleAsyncTaskExecutorBuilderShouldReadProperties() {
 		this.contextRunner
 			.withPropertyValues("spring.task.execution.thread-name-prefix=mytest-",
+					"spring.task.execution.simple.reject-tasks-when-limit-reached=true",
 					"spring.task.execution.simple.concurrency-limit=1",
 					"spring.task.execution.shutdown.await-termination=true",
 					"spring.task.execution.shutdown.await-termination-period=30s")
 			.run(assertSimpleAsyncTaskExecutor((taskExecutor) -> {
+				assertThat(taskExecutor).hasFieldOrPropertyWithValue("rejectTasksWhenLimitReached", true);
 				assertThat(taskExecutor.getConcurrencyLimit()).isEqualTo(1);
 				assertThat(taskExecutor.getThreadNamePrefix()).isEqualTo("mytest-");
 				assertThat(taskExecutor).hasFieldOrPropertyWithValue("taskTerminationTimeout", 30000L);
@@ -364,12 +366,6 @@ class TaskExecutionAutoConfigurationTests {
 			});
 	}
 
-	private Executor createCustomAsyncExecutor(String threadNamePrefix) {
-		SimpleAsyncTaskExecutor executor = new SimpleAsyncTaskExecutor();
-		executor.setThreadNamePrefix(threadNamePrefix);
-		return executor;
-	}
-
 	@Test
 	void enableAsyncUsesAutoConfiguredOneByDefaultEvenThoughSchedulingIsConfigured() {
 		this.contextRunner.withPropertyValues("spring.task.execution.thread-name-prefix=auto-task-")
@@ -380,6 +376,75 @@ class TaskExecutionAutoConfigurationTests {
 				String text = bean.echo("something").get();
 				assertThat(text).contains("auto-task-").contains("something");
 			});
+	}
+
+	@Test
+	void shouldAliasApplicationTaskExecutorToBootstrapExecutor() {
+		this.contextRunner.run((context) -> {
+			assertThat(context).hasSingleBean(Executor.class)
+				.hasBean("applicationTaskExecutor")
+				.hasBean("bootstrapExecutor");
+			assertThat(context.getAliases("applicationTaskExecutor")).containsExactly("bootstrapExecutor");
+			assertThat(context.getBean("bootstrapExecutor")).isSameAs(context.getBean("applicationTaskExecutor"));
+		});
+	}
+
+	@Test
+	void shouldNotAliasApplicationTaskExecutorWhenBootstrapExecutorIsDefined() {
+		this.contextRunner.withBean("applicationTaskExecutor", Executor.class, () -> createCustomAsyncExecutor("app-"))
+			.withBean("bootstrapExecutor", Executor.class, () -> createCustomAsyncExecutor("bootstrap-"))
+			.run((context) -> {
+				assertThat(context.getBeansOfType(Executor.class)).hasSize(2);
+				assertThat(context).hasBean("applicationTaskExecutor").hasBean("bootstrapExecutor");
+				assertThat(context.getAliases("applicationTaskExecutor")).isEmpty();
+				assertThat(context.getBean("bootstrapExecutor"))
+					.isNotSameAs(context.getBean("applicationTaskExecutor"));
+			});
+	}
+
+	@Test
+	void shouldNotAliasApplicationTaskExecutorWhenApplicationTaskExecutorIsMissing() {
+		this.contextRunner.withBean("customExecutor", Executor.class, () -> createCustomAsyncExecutor("custom-"))
+			.run((context) -> assertThat(context).hasSingleBean(Executor.class)
+				.hasBean("customExecutor")
+				.doesNotHaveBean("applicationTaskExecutor")
+				.doesNotHaveBean("bootstrapExecutor"));
+	}
+
+	@Test
+	void shouldNotAliasApplicationTaskExecutorWhenBootstrapExecutorRegisteredAsSingleton() {
+		this.contextRunner.withBean("applicationTaskExecutor", Executor.class, () -> createCustomAsyncExecutor("app-"))
+			.withInitializer((context) -> context.getBeanFactory()
+				.registerSingleton("bootstrapExecutor", createCustomAsyncExecutor("bootstrap-")))
+			.run((context) -> {
+				assertThat(context.getBeansOfType(Executor.class)).hasSize(2);
+				assertThat(context).hasBean("applicationTaskExecutor").hasBean("bootstrapExecutor");
+				assertThat(context.getAliases("applicationTaskExecutor")).isEmpty();
+				assertThat(context.getBean("bootstrapExecutor"))
+					.isNotSameAs(context.getBean("applicationTaskExecutor"));
+			});
+	}
+
+	@Test
+	void shouldNotAliasApplicationTaskExecutorWhenBootstrapExecutorAliasIsDefined() {
+		Executor executor = Runnable::run;
+		this.contextRunner.withBean("applicationTaskExecutor", Executor.class, () -> executor)
+			.withBean("customExecutor", Executor.class, () -> createCustomAsyncExecutor("custom"))
+			.withInitializer((context) -> context.getBeanFactory().registerAlias("customExecutor", "bootstrapExecutor"))
+			.run((context) -> {
+				assertThat(context.getBeansOfType(Executor.class)).hasSize(2);
+				assertThat(context).hasBean("applicationTaskExecutor").hasBean("customExecutor");
+				assertThat(context.getAliases("applicationTaskExecutor")).isEmpty();
+				assertThat(context.getAliases("customExecutor")).contains("bootstrapExecutor");
+				assertThat(context.getBean("bootstrapExecutor")).isNotSameAs(context.getBean("applicationTaskExecutor"))
+					.isSameAs(context.getBean("customExecutor"));
+			});
+	}
+
+	private Executor createCustomAsyncExecutor(String threadNamePrefix) {
+		SimpleAsyncTaskExecutor executor = new SimpleAsyncTaskExecutor();
+		executor.setThreadNamePrefix(threadNamePrefix);
+		return executor;
 	}
 
 	private ContextConsumer<AssertableApplicationContext> assertThreadPoolTaskExecutor(

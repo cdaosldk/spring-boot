@@ -35,6 +35,7 @@ import java.util.stream.Collectors;
 import jakarta.servlet.Filter;
 import jakarta.servlet.MultipartConfigElement;
 import jakarta.servlet.Servlet;
+import jakarta.servlet.annotation.WebInitParam;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -63,6 +64,8 @@ import org.springframework.util.StringUtils;
  * @author Phillip Webb
  * @author Brian Clozel
  * @author Moritz Halbritter
+ * @author Daeho Kwon
+ * @author Dmytro Danilenkov
  * @since 1.4.0
  */
 public class ServletContextInitializerBeans extends AbstractCollection<ServletContextInitializer> {
@@ -318,6 +321,10 @@ public class ServletContextInitializerBeans extends AbstractCollection<ServletCo
 			bean.setIgnoreRegistrationFailure(registration.ignoreRegistrationFailure());
 			bean.setLoadOnStartup(registration.loadOnStartup());
 			bean.setUrlMappings(Arrays.asList(registration.urlMappings()));
+			for (WebInitParam param : registration.initParameters()) {
+				bean.addInitParameter(param.name(), param.value());
+			}
+			bean.setMultipartConfig(new MultipartConfigElement(registration.multipartConfig()));
 		}
 
 	}
@@ -362,6 +369,16 @@ public class ServletContextInitializerBeans extends AbstractCollection<ServletCo
 			bean.setMatchAfter(registration.matchAfter());
 			bean.setServletNames(Arrays.asList(registration.servletNames()));
 			bean.setUrlPatterns(Arrays.asList(registration.urlPatterns()));
+			for (WebInitParam param : registration.initParameters()) {
+				bean.addInitParameter(param.name(), param.value());
+			}
+			this.beanFactory.getBeanProvider(ServletRegistrationBean.class).forEach((servletRegistrationBean) -> {
+				for (Class<?> servletClass : registration.servletClasses()) {
+					if (servletClass.isInstance(servletRegistrationBean.getServlet())) {
+						bean.addServletRegistrationBeans(servletRegistrationBean);
+					}
+				}
+			});
 		}
 
 	}

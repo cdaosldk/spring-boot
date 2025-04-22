@@ -16,6 +16,10 @@
 
 package org.springframework.boot.web.servlet;
 
+import java.util.Collection;
+import java.util.EnumSet;
+import java.util.Map;
+
 import jakarta.servlet.DispatcherType;
 import jakarta.servlet.Filter;
 import jakarta.servlet.FilterChain;
@@ -23,7 +27,11 @@ import jakarta.servlet.FilterConfig;
 import jakarta.servlet.ServletContext;
 import jakarta.servlet.ServletRequest;
 import jakarta.servlet.ServletResponse;
+import jakarta.servlet.annotation.MultipartConfig;
+import jakarta.servlet.annotation.WebInitParam;
 import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSessionIdListener;
 import org.assertj.core.api.ThrowingConsumer;
 import org.junit.jupiter.api.Test;
@@ -34,6 +42,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
+import org.springframework.web.filter.OncePerRequestFilter;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -42,6 +51,8 @@ import static org.assertj.core.api.Assertions.assertThat;
  *
  * @author Andy Wilkinson
  * @author Moritz Halbritter
+ * @author Daeho Kwon
+ * @author Dmytro Danilenkov
  */
 class ServletContextInitializerBeansTests {
 
@@ -118,6 +129,13 @@ class ServletContextInitializerBeansTests {
 			assertThat(servletRegistrationBean.getServletName()).isEqualTo("test");
 			assertThat(servletRegistrationBean.isAsyncSupported()).isFalse();
 			assertThat(servletRegistrationBean.getUrlMappings()).containsExactly("/test/*");
+			assertThat(servletRegistrationBean.getInitParameters())
+				.containsExactlyInAnyOrderEntriesOf(Map.of("env", "test", "debug", "true"));
+			assertThat(servletRegistrationBean.getMultipartConfig()).isNotNull();
+			assertThat(servletRegistrationBean.getMultipartConfig().getLocation()).isEqualTo("/tmp");
+			assertThat(servletRegistrationBean.getMultipartConfig().getMaxFileSize()).isEqualTo(1024);
+			assertThat(servletRegistrationBean.getMultipartConfig().getMaxRequestSize()).isEqualTo(4096);
+			assertThat(servletRegistrationBean.getMultipartConfig().getFileSizeThreshold()).isEqualTo(128);
 		});
 	}
 
@@ -136,7 +154,26 @@ class ServletContextInitializerBeansTests {
 			assertThat(filterRegistrationBean.getServletNames()).containsExactly("test");
 			assertThat(filterRegistrationBean.determineDispatcherTypes()).containsExactly(DispatcherType.ERROR);
 			assertThat(filterRegistrationBean.getUrlPatterns()).containsExactly("/test/*");
+			assertThat(filterRegistrationBean.getInitParameters())
+				.containsExactlyInAnyOrderEntriesOf(Map.of("env", "test", "debug", "true"));
+			Collection<ServletRegistrationBean<?>> servletRegistrationBeans = filterRegistrationBean
+				.getServletRegistrationBeans();
+			assertThat(servletRegistrationBeans).hasSize(1);
+			assertThat(servletRegistrationBeans.iterator().next().getServletName())
+				.isEqualTo("testServletRegistrationBean");
+
 		});
+	}
+
+	@Test
+	@SuppressWarnings("unchecked")
+	void shouldApplyFilterRegistrationAnnotationWithDefaultDispatcherTypes() {
+		load(FilterConfigurationWithAnnotationAndDefaultDispatcherTypes.class);
+		ServletContextInitializerBeans initializerBeans = new ServletContextInitializerBeans(
+				this.context.getBeanFactory(), TestServletContextInitializer.class);
+		assertThatSingleRegistration(initializerBeans, FilterRegistrationBean.class,
+				(filterRegistrationBean) -> assertThat(filterRegistrationBean.determineDispatcherTypes())
+					.containsExactlyElementsOf(EnumSet.allOf(DispatcherType.class)));
 	}
 
 	@Test
@@ -216,7 +253,11 @@ class ServletContextInitializerBeansTests {
 
 		@Bean
 		@ServletRegistration(enabled = false, name = "test", asyncSupported = false, urlMappings = "/test/*",
-				loadOnStartup = 1)
+				loadOnStartup = 1,
+				initParameters = { @WebInitParam(name = "env", value = "test"),
+						@WebInitParam(name = "debug", value = "true") },
+				multipartConfig = @MultipartConfig(location = "/tmp", maxFileSize = 1024, maxRequestSize = 4096,
+						fileSizeThreshold = 128))
 		TestServlet testServlet() {
 			return new TestServlet();
 		}
@@ -278,11 +319,52 @@ class ServletContextInitializerBeansTests {
 	static class FilterConfigurationWithAnnotation {
 
 		@Bean
-		@FilterRegistration(enabled = false, name = "test", asyncSupported = false,
-				dispatcherTypes = DispatcherType.ERROR, matchAfter = true, servletNames = "test",
-				urlPatterns = "/test/*")
+		@FilterRegistration(
+				enabled = false, name = "test", asyncSupported = false, dispatcherTypes = DispatcherType.ERROR,
+				matchAfter = true, servletNames = "test", urlPatterns = "/test/*", initParameters = {
+						@WebInitParam(name = "env", value = "test"), @WebInitParam(name = "debug", value = "true") },
+				servletClasses = { TestServlet.class })
 		TestFilter testFilter() {
 			return new TestFilter();
+		}
+
+		@Bean
+		ServletRegistrationBean<TestServlet> testServletRegistrationBean() {
+			return new ServletRegistrationBean<>(new TestServlet());
+		}
+
+		@Bean
+		ServletRegistrationBean<NonMatchingServlet> nonMatchingServletRegistrationBean() {
+			return new ServletRegistrationBean<>(new NonMatchingServlet());
+		}
+
+		static class NonMatchingServlet extends HttpServlet implements ServletContextInitializer {
+
+			@Override
+			public void onStartup(ServletContext servletContext) {
+
+			}
+
+		}
+
+	}
+
+	@Configuration(proxyBeanMethods = false)
+	static class FilterConfigurationWithAnnotationAndDefaultDispatcherTypes {
+
+		@Bean
+		@FilterRegistration(name = "test")
+		TestOncePerRequestFilter testFilter() {
+			return new TestOncePerRequestFilter();
+		}
+
+		static class TestOncePerRequestFilter extends OncePerRequestFilter {
+
+			@Override
+			protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
+					FilterChain filterChain) {
+			}
+
 		}
 
 	}
