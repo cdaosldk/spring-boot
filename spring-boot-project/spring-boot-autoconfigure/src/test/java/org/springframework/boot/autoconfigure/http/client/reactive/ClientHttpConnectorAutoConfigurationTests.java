@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2025 the original author or authors.
+ * Copyright 2012-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -41,6 +41,7 @@ import org.springframework.http.client.ReactorResourceFactory;
 import org.springframework.http.client.reactive.ClientHttpConnector;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 import static org.mockito.Mockito.mock;
 
 /**
@@ -123,7 +124,7 @@ class ClientHttpConnectorAutoConfigurationTests {
 
 	@Test
 	void configuresDefinedClientHttpConnectorBuilder() {
-		this.contextRunner.withPropertyValues("spring.http.reactiveclient.settings.connector=jetty")
+		this.contextRunner.withPropertyValues("spring.http.reactiveclient.connector=jetty")
 			.run((context) -> assertThat(context.getBean(ClientHttpConnectorBuilder.class))
 				.isInstanceOf(JettyClientHttpConnectorBuilder.class));
 	}
@@ -131,10 +132,9 @@ class ClientHttpConnectorAutoConfigurationTests {
 	@Test
 	void configuresClientHttpConnectorSettings() {
 		this.contextRunner.withPropertyValues(sslPropertyValues().toArray(String[]::new))
-			.withPropertyValues("spring.http.reactiveclient.settings.redirects=dont-follow",
-					"spring.http.reactiveclient.settings.connect-timeout=10s",
-					"spring.http.reactiveclient.settings.read-timeout=20s",
-					"spring.http.reactiveclient.settings.ssl.bundle=test")
+			.withPropertyValues("spring.http.reactiveclient.redirects=dont-follow",
+					"spring.http.reactiveclient.connect-timeout=10s", "spring.http.reactiveclient.read-timeout=20s",
+					"spring.http.reactiveclient.ssl.bundle=test")
 			.run((context) -> {
 				ClientHttpConnectorSettings settings = context.getBean(ClientHttpConnectorSettings.class);
 				assertThat(settings.redirects()).isEqualTo(HttpRedirects.DONT_FOLLOW);
@@ -142,6 +142,17 @@ class ClientHttpConnectorAutoConfigurationTests {
 				assertThat(settings.readTimeout()).isEqualTo(Duration.ofSeconds(20));
 				assertThat(settings.sslBundle().getKey().getAlias()).isEqualTo("alias1");
 			});
+	}
+
+	@Test
+	void shouldBeConditionalOnAtLeastOneHttpConnectorClass() {
+		FilteredClassLoader classLoader = new FilteredClassLoader(reactor.netty.http.client.HttpClient.class,
+				org.eclipse.jetty.client.HttpClient.class, org.apache.hc.client5.http.impl.async.HttpAsyncClients.class,
+				java.net.http.HttpClient.class);
+		assertThatIllegalStateException().as("enough filtering")
+			.isThrownBy(() -> ClientHttpConnectorBuilder.detect(classLoader));
+		this.contextRunner.withClassLoader(classLoader)
+			.run((context) -> assertThat(context).doesNotHaveBean(ClientHttpConnectorSettings.class));
 	}
 
 	private List<String> sslPropertyValues() {
@@ -156,7 +167,7 @@ class ClientHttpConnectorAutoConfigurationTests {
 
 	@Test
 	void clientHttpConnectorBuilderCustomizersAreApplied() {
-		this.contextRunner.withPropertyValues("spring.http.reactiveclient.settings.connector=jdk")
+		this.contextRunner.withPropertyValues("spring.http.reactiveclient.connector=jdk")
 			.withUserConfiguration(ClientHttpConnectorBuilderCustomizersConfiguration.class)
 			.run((context) -> {
 				ClientHttpConnector connector = context.getBean(ClientHttpConnectorBuilder.class).build();

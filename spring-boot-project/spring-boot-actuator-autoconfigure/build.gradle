@@ -1,3 +1,19 @@
+/*
+ * Copyright 2012-present the original author or authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the License);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 plugins {
 	id "java-library"
 	id "org.springframework.boot.antora-contributor"
@@ -33,7 +49,6 @@ dependencies {
 	optional("io.micrometer:micrometer-tracing")
 	optional("io.micrometer:micrometer-tracing-bridge-brave")
 	optional("io.micrometer:micrometer-tracing-bridge-otel")
-	optional("io.micrometer:micrometer-tracing-reporter-wavefront")
 	optional("io.micrometer:micrometer-registry-appoptics")
 	optional("io.micrometer:micrometer-registry-atlas") {
 		exclude group: "javax.inject", module: "javax.inject"
@@ -51,12 +66,10 @@ dependencies {
 	optional("io.micrometer:micrometer-registry-otlp")
 	optional("io.micrometer:micrometer-registry-prometheus")
 	optional("io.micrometer:micrometer-registry-stackdriver") {
-		exclude group: "commons-logging", module: "commons-logging"
 		exclude group: "javax.annotation", module: "javax.annotation-api"
 	}
 	optional("io.micrometer:micrometer-registry-signalfx")
 	optional("io.micrometer:micrometer-registry-statsd")
-	optional("io.micrometer:micrometer-registry-wavefront")
 	optional("io.zipkin.reporter2:zipkin-reporter-brave")
 	optional("io.opentelemetry:opentelemetry-exporter-zipkin")
 	optional("io.opentelemetry:opentelemetry-exporter-otlp")
@@ -71,9 +84,7 @@ dependencies {
 	optional("javax.cache:cache-api")
 	optional("org.apache.activemq:activemq-broker")
 	optional("org.apache.activemq:activemq-client")
-	optional("org.apache.commons:commons-dbcp2") {
-		exclude group: "commons-logging", module: "commons-logging"
-	}
+	optional("org.apache.commons:commons-dbcp2")
 	optional("org.apache.kafka:kafka-clients")
 	optional("org.apache.kafka:kafka-streams")
 	optional("org.apache.logging.log4j:log4j-api")
@@ -87,9 +98,7 @@ dependencies {
 	optional("org.eclipse.jetty:jetty-server") {
 		exclude group: "org.eclipse.jetty.toolchain", module: "jetty-jakarta-servlet-api"
 	}
-	optional("org.elasticsearch.client:elasticsearch-rest-client") {
-		exclude group: "commons-logging", module: "commons-logging"
-	}
+	optional("org.elasticsearch.client:elasticsearch-rest-client")
 	optional("org.flywaydb:flyway-core")
 	optional("org.glassfish.jersey.core:jersey-server")
 	optional("org.glassfish.jersey.containers:jersey-container-servlet-core")
@@ -121,9 +130,7 @@ dependencies {
 	optional("org.springframework.data:spring-data-ldap")
 	optional("org.springframework.data:spring-data-mongodb")
 	optional("org.springframework.data:spring-data-redis")
-	optional("org.springframework.data:spring-data-elasticsearch") {
-		exclude group: "commons-logging", module: "commons-logging"
-	}
+	optional("org.springframework.data:spring-data-elasticsearch")
 	optional("org.springframework.graphql:spring-graphql")
 	optional("org.springframework.integration:spring-integration-core")
 	optional("org.springframework.kafka:spring-kafka")
@@ -145,12 +152,8 @@ dependencies {
 	testImplementation("io.undertow:undertow-core")
 	testImplementation("io.undertow:undertow-servlet")
 	testImplementation("jakarta.xml.bind:jakarta.xml.bind-api")
-	testImplementation("org.apache.activemq:artemis-jakarta-client") {
-		exclude group: "commons-logging", module: "commons-logging"
-	}
-	testImplementation("org.apache.activemq:artemis-jakarta-server") {
-		exclude group: "commons-logging", module: "commons-logging"
-	}
+	testImplementation("org.apache.activemq:artemis-jakarta-client")
+	testImplementation("org.apache.activemq:artemis-jakarta-server")
 	testImplementation("org.apache.logging.log4j:log4j-to-slf4j")
 	testImplementation("org.aspectj:aspectjrt")
 	testImplementation("org.assertj:assertj-core")
@@ -212,6 +215,10 @@ def documentationTest = tasks.register("documentationTest", Test) {
 			enabled = false
 		}
 	}
+}
+
+tasks.named("generateAntoraPlaybook") {
+	antoraExtensions.xref.stubs = ["appendix:.*", "api:.*", "reference:.*"]
 }
 
 antoraContributions {

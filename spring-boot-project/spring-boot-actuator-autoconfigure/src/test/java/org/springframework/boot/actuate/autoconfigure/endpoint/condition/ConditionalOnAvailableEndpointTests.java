@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2024 the original author or authors.
+ * Copyright 2012-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -294,6 +294,13 @@ class ConditionalOnAvailableEndpointTests {
 			.run((context) -> assertThat(context).hasSingleBean(DisabledButAccessibleEndpoint.class));
 	}
 
+	@Test
+	@WithTestEndpointOutcomeExposureContributor
+	void exposureOutcomeContributorCanMakeEndpointAvailable() {
+		this.contextRunner.withPropertyValues("management.endpoints.test.exposure.include=test")
+			.run((context) -> assertThat(context).hasSingleBean(TestEndpoint.class));
+	}
+
 	@Endpoint(id = "health")
 	static class HealthEndpoint {
 
@@ -324,6 +331,7 @@ class ConditionalOnAvailableEndpointTests {
 
 	}
 
+	@SuppressWarnings({ "deprecation", "removal" })
 	@Endpoint(id = "disabledbutaccessible", enableByDefault = false)
 	static class DisabledButAccessibleEndpoint {
 

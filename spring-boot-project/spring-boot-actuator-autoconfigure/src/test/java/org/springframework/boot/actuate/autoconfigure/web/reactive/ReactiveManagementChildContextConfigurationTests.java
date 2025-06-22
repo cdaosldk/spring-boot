@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2025 the original author or authors.
+ * Copyright 2012-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,8 @@ package org.springframework.boot.actuate.autoconfigure.web.reactive;
 import org.junit.jupiter.api.Test;
 
 import org.springframework.boot.actuate.autoconfigure.web.reactive.ReactiveManagementChildContextConfiguration.AccessLogCustomizer;
+import org.springframework.boot.actuate.autoconfigure.web.server.ManagementServerProperties;
+import org.springframework.boot.test.context.runner.ReactiveWebApplicationContextRunner;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -44,6 +46,24 @@ class ReactiveManagementChildContextConfigurationTests {
 		};
 		assertThat(customizer.customizePrefix(null)).isEqualTo(null);
 		assertThat(customizer.customizePrefix("existing")).isEqualTo("existing");
+	}
+
+	@Test
+	// gh-45857
+	void failsWithoutManagementServerPropertiesBeanFromParent() {
+		new ReactiveWebApplicationContextRunner()
+			.run((parent) -> new ReactiveWebApplicationContextRunner().withParent(parent)
+				.withUserConfiguration(ReactiveManagementChildContextConfiguration.class)
+				.run((context) -> assertThat(context).hasFailed()));
+	}
+
+	@Test
+	// gh-45857
+	void succeedsWithManagementServerPropertiesBeanFromParent() {
+		new ReactiveWebApplicationContextRunner().withBean(ManagementServerProperties.class)
+			.run((parent) -> new ReactiveWebApplicationContextRunner().withParent(parent)
+				.withUserConfiguration(ReactiveManagementChildContextConfiguration.class)
+				.run((context) -> assertThat(context).hasNotFailed()));
 	}
 
 }

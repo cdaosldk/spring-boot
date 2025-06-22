@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2025 the original author or authors.
+ * Copyright 2012-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,8 +16,7 @@
 
 package org.springframework.boot.context.properties.source;
 
-import java.util.Arrays;
-import java.util.Collections;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.function.BiPredicate;
@@ -42,12 +41,18 @@ final class SystemEnvironmentPropertyMapper implements PropertyMapper {
 
 	@Override
 	public List<String> map(ConfigurationPropertyName configurationPropertyName) {
-		String name = configurationPropertyName.toString(ToStringFormat.SYSTEM_ENVIRONMENT);
-		String legacyName = configurationPropertyName.toString(ToStringFormat.LEGACY_SYSTEM_ENVIRONMENT);
-		if (name.equals(legacyName)) {
-			return Collections.singletonList(name);
+		List<String> mapped = new ArrayList<>(4);
+		addIfMissing(mapped, configurationPropertyName.toString(ToStringFormat.SYSTEM_ENVIRONMENT, true));
+		addIfMissing(mapped, configurationPropertyName.toString(ToStringFormat.LEGACY_SYSTEM_ENVIRONMENT, true));
+		addIfMissing(mapped, configurationPropertyName.toString(ToStringFormat.SYSTEM_ENVIRONMENT, false));
+		addIfMissing(mapped, configurationPropertyName.toString(ToStringFormat.LEGACY_SYSTEM_ENVIRONMENT, false));
+		return mapped;
+	}
+
+	private void addIfMissing(List<String> list, String value) {
+		if (!list.contains(value)) {
+			list.add(value);
 		}
-		return Arrays.asList(name, legacyName);
 	}
 
 	@Override

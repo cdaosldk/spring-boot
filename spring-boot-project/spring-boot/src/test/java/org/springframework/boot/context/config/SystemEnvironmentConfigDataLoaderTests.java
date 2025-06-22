@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2025 the original author or authors.
+ * Copyright 2012-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -63,7 +63,7 @@ class SystemEnvironmentConfigDataLoaderTests {
 	void loadWhenNoContentThrowsException() {
 		assertThatExceptionOfType(ConfigDataResourceNotFoundException.class)
 			.isThrownBy(() -> this.loader.load(this.context, createResource("VAR1")))
-			.withMessage("Config data resource 'system envionement variable [VAR1] content "
+			.withMessage("Config data resource 'system environment variable [VAR1] content "
 					+ "loaded using PropertiesPropertySourceLoader' cannot be found");
 	}
 

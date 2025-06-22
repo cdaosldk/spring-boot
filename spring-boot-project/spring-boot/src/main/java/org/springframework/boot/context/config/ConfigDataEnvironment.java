@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2024 the original author or authors.
+ * Copyright 2012-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -188,7 +188,7 @@ class ConfigDataEnvironment {
 	protected ConfigDataEnvironmentContributors createContributors(
 			List<ConfigDataEnvironmentContributor> contributors) {
 		return new ConfigDataEnvironmentContributors(this.logFactory, this.bootstrapContext, contributors,
-				this.environment.getConversionService());
+				this.environment.getConversionService(), this.environmentUpdateListener);
 	}
 
 	ConfigDataEnvironmentContributors getContributors() {
@@ -297,14 +297,16 @@ class ConfigDataEnvironment {
 			ConfigurationPropertySource source = contributor.getConfigurationPropertySource();
 			if (source != null && !contributor.hasConfigDataOption(ConfigData.Option.IGNORE_PROFILES)) {
 				Binder binder = new Binder(Collections.singleton(source), placeholdersResolver);
-				binder.bind(Profiles.INCLUDE_PROFILES, STRING_LIST).ifBound((includes) -> {
-					if (!contributor.isActive(activationContext)) {
-						InactiveConfigDataAccessException.throwIfPropertyFound(contributor, Profiles.INCLUDE_PROFILES);
-						InactiveConfigDataAccessException.throwIfPropertyFound(contributor,
-								Profiles.INCLUDE_PROFILES.append("[0]"));
-					}
-					result.addAll(includes);
-				});
+				binder.bind(Profiles.INCLUDE_PROFILES, STRING_LIST, ProfilesValidator.get(binder))
+					.ifBound((includes) -> {
+						if (!contributor.isActive(activationContext)) {
+							InactiveConfigDataAccessException.throwIfPropertyFound(contributor,
+									Profiles.INCLUDE_PROFILES);
+							InactiveConfigDataAccessException.throwIfPropertyFound(contributor,
+									Profiles.INCLUDE_PROFILES.append("[0]"));
+						}
+						result.addAll(includes);
+					});
 			}
 		}
 		return result;

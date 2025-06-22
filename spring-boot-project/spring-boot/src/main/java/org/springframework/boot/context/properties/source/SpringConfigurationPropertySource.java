@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2025 the original author or authors.
+ * Copyright 2012-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 
 package org.springframework.boot.context.properties.source;
 
+import java.util.Locale;
 import java.util.Map;
 import java.util.Random;
 
@@ -109,7 +110,8 @@ class SpringConfigurationPropertySource implements ConfigurationPropertySource {
 	}
 
 	Object getSystemEnvironmentProperty(Map<String, Object> systemEnvironment, String name) {
-		return systemEnvironment.get(name);
+		Object value = systemEnvironment.get(name);
+		return (value != null) ? value : systemEnvironment.get(name.toLowerCase(Locale.ROOT));
 	}
 
 	@Override

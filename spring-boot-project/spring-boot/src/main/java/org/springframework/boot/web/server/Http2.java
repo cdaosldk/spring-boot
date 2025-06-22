@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2025 the original author or authors.
+ * Copyright 2012-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,14 +16,20 @@
 
 package org.springframework.boot.web.server;
 
+import org.springframework.boot.context.properties.ConfigurationPropertiesSource;
+
 /**
  * Simple server-independent abstraction for HTTP/2 configuration.
  *
  * @author Brian Clozel
  * @since 2.0.0
  */
+@ConfigurationPropertiesSource
 public class Http2 {
 
+	/**
+	 * Whether to enable HTTP/2 support, if the current environment supports it.
+	 */
 	private boolean enabled;
 
 	/**

@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-2025 the original author or authors.
+ * Copyright 2012-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -64,6 +64,7 @@ import org.springframework.util.ResourceUtils;
  * @author Scott Frederick
  * @author Ivan Malutin
  * @author Phillip Webb
+ * @author Ngoc Nhan
  */
 final class ArchitectureRules {
 
@@ -96,6 +97,7 @@ final class ArchitectureRules {
 		rules.add(classLevelConfigurationPropertiesShouldNotSpecifyOnlyPrefixAttribute());
 		rules.add(methodLevelConfigurationPropertiesShouldNotSpecifyOnlyPrefixAttribute());
 		rules.add(conditionsShouldNotBePublic());
+		rules.add(allConfigurationPropertiesBindingBeanMethodsShouldBeStatic());
 		return List.copyOf(rules);
 	}
 
@@ -306,6 +308,14 @@ final class ArchitectureRules {
 			.areNotAnnotatedWith(Deprecated.class)
 			.should()
 			.bePublic()
+			.allowEmptyShould(true);
+	}
+
+	private static ArchRule allConfigurationPropertiesBindingBeanMethodsShouldBeStatic() {
+		return methodsThatAreAnnotatedWith("org.springframework.context.annotation.Bean").and()
+			.areAnnotatedWith("org.springframework.boot.context.properties.ConfigurationPropertiesBinding")
+			.should()
+			.beStatic()
 			.allowEmptyShould(true);
 	}
 

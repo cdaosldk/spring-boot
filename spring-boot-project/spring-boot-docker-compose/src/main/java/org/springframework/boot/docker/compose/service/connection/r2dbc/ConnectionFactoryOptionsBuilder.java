@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2025 the original author or authors.
+ * Copyright 2012-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,7 +24,6 @@ import io.r2dbc.spi.ConnectionFactoryOptions;
 import io.r2dbc.spi.Option;
 
 import org.springframework.boot.docker.compose.core.RunningService;
-import org.springframework.boot.docker.compose.service.connection.jdbc.JdbcUrlBuilder;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 
@@ -46,8 +45,8 @@ public class ConnectionFactoryOptionsBuilder {
 	private final int sourcePort;
 
 	/**
-	 * Create a new {@link JdbcUrlBuilder} instance.
-	 * @param driver the driver protocol
+	 * Create a new {@link ConnectionFactoryOptionsBuilder} instance.
+	 * @param driver the driver
 	 * @param containerPort the source container port
 	 */
 	public ConnectionFactoryOptionsBuilder(String driver, int containerPort) {

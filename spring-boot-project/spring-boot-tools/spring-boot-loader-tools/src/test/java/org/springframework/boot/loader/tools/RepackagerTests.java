@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2023 the original author or authors.
+ * Copyright 2012-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -162,7 +162,7 @@ class RepackagerTests extends AbstractPackagerTests<Repackager> {
 		assertThat(new String(bytes)).startsWith("ABC");
 		assertThat(hasLauncherClasses(source)).isFalse();
 		assertThat(hasLauncherClasses(this.destination)).isTrue();
-		try (ZipFile zipFile = new ZipFile(this.destination)) {
+		try (ZipFile zipFile = ZipFile.builder().setFile(this.destination).get()) {
 			assertThat(zipFile.getEntries().hasMoreElements()).isTrue();
 		}
 		try {
@@ -267,7 +267,7 @@ class RepackagerTests extends AbstractPackagerTests<Repackager> {
 	@Override
 	protected Collection<ZipArchiveEntry> getAllPackagedEntries() throws IOException {
 		List<ZipArchiveEntry> result = new ArrayList<>();
-		try (ZipFile zip = new ZipFile(this.destination)) {
+		try (ZipFile zip = ZipFile.builder().setFile(this.destination).get()) {
 			Enumeration<ZipArchiveEntry> entries = zip.getEntries();
 			while (entries.hasMoreElements()) {
 				result.add(entries.nextElement());
@@ -285,7 +285,7 @@ class RepackagerTests extends AbstractPackagerTests<Repackager> {
 
 	@Override
 	protected String getPackagedEntryContent(String name) throws IOException {
-		try (ZipFile zip = new ZipFile(this.destination)) {
+		try (ZipFile zip = ZipFile.builder().setFile(this.destination).get()) {
 			ZipArchiveEntry entry = zip.getEntry(name);
 			if (entry == null) {
 				return null;

@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2025 the original author or authors.
+ * Copyright 2012-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -431,7 +431,10 @@ public class WebMvcProperties {
 
 		/**
 		 * Use the {@code AntPathMatcher} implementation.
+		 * @deprecated since 4.0.0 for removal in 4.2.0 in favor of
+		 * {@link #PATH_PATTERN_PARSER}
 		 */
+		@Deprecated(since = "4.0.0", forRemoval = true)
 		ANT_PATH_MATCHER,
 
 		/**

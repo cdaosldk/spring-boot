@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2025 the original author or authors.
+ * Copyright 2012-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,7 +33,6 @@ import org.apache.maven.execution.MavenSession;
 import org.apache.maven.model.Resource;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
-import org.apache.maven.plugins.annotations.Component;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.toolchain.ToolchainManager;
@@ -76,8 +75,7 @@ public abstract class AbstractRunMojo extends AbstractDependencyFilterMojo {
 	 *
 	 * @since 2.3.0
 	 */
-	@Component
-	private ToolchainManager toolchainManager;
+	private final ToolchainManager toolchainManager;
 
 	/**
 	 * Add maven resources to the classpath directly, this allows live in-place editing of
@@ -204,6 +202,10 @@ public abstract class AbstractRunMojo extends AbstractDependencyFilterMojo {
 	 */
 	@Parameter(property = "spring-boot.run.skip", defaultValue = "false")
 	private boolean skip;
+
+	protected AbstractRunMojo(ToolchainManager toolchainManager) {
+		this.toolchainManager = toolchainManager;
+	}
 
 	@Override
 	public void execute() throws MojoExecutionException, MojoFailureException {

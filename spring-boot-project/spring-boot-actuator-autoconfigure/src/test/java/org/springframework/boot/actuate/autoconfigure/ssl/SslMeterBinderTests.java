@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2025 the original author or authors.
+ * Copyright 2012-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -43,15 +43,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 class SslMeterBinderTests {
 
 	private static final Clock CLOCK = Clock.fixed(Instant.parse("2024-10-21T13:51:40Z"), ZoneId.of("UTC"));
-
-	@Test
-	void shouldRegisterChainMetrics() {
-		MeterRegistry meterRegistry = bindToRegistry();
-		assertThat(meterRegistry.get("ssl.chains").tag("status", "valid").gauge().value()).isEqualTo(3.0);
-		assertThat(meterRegistry.get("ssl.chains").tag("status", "expired").gauge().value()).isEqualTo(1.0);
-		assertThat(meterRegistry.get("ssl.chains").tag("status", "not-yet-valid").gauge().value()).isEqualTo(1.0);
-		assertThat(meterRegistry.get("ssl.chains").tag("status", "will-expire-soon").gauge().value()).isEqualTo(0.0);
-	}
 
 	@Test
 	void shouldRegisterChainExpiryMetrics() {
@@ -101,7 +92,7 @@ class SslMeterBinderTests {
 	}
 
 	private SslInfo createSslInfo(SslBundles sslBundles) {
-		return new SslInfo(sslBundles, Duration.ofDays(7), CLOCK);
+		return new SslInfo(sslBundles);
 	}
 
 }

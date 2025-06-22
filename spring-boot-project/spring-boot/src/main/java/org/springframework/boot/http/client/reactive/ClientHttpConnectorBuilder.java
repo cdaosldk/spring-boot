@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2025 the original author or authors.
+ * Copyright 2012-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -157,7 +157,7 @@ public interface ClientHttpConnectorBuilder<T extends ClientHttpConnector> {
 
 	/**
 	 * Detect the most suitable {@link ClientHttpConnectorBuilder} based on the classpath.
-	 * The methods favors builders in the following order:
+	 * The method favors builders in the following order:
 	 * <ol>
 	 * <li>{@link #reactor()}</li>
 	 * <li>{@link #jetty()}</li>
@@ -172,7 +172,7 @@ public interface ClientHttpConnectorBuilder<T extends ClientHttpConnector> {
 
 	/**
 	 * Detect the most suitable {@link ClientHttpConnectorBuilder} based on the classpath.
-	 * The methods favors builders in the following order:
+	 * The method favors builders in the following order:
 	 * <ol>
 	 * <li>{@link #reactor()}</li>
 	 * <li>{@link #jetty()}</li>

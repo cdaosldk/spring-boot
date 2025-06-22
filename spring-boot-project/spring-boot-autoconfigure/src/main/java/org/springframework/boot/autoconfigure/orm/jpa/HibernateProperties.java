@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2025 the original author or authors.
+ * Copyright 2012-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,7 +21,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Supplier;
 
-import org.hibernate.boot.model.naming.CamelCaseToUnderscoresNamingStrategy;
+import org.hibernate.boot.model.naming.PhysicalNamingStrategySnakeCaseImpl;
 import org.hibernate.cfg.MappingSettings;
 import org.hibernate.cfg.PersistenceSettings;
 import org.hibernate.cfg.SchemaToolingSettings;
@@ -152,7 +152,7 @@ public class HibernateProperties {
 			applyNamingStrategy(properties, MappingSettings.IMPLICIT_NAMING_STRATEGY, this.implicitStrategy,
 					SpringImplicitNamingStrategy.class::getName);
 			applyNamingStrategy(properties, MappingSettings.PHYSICAL_NAMING_STRATEGY, this.physicalStrategy,
-					CamelCaseToUnderscoresNamingStrategy.class::getName);
+					PhysicalNamingStrategySnakeCaseImpl.class::getName);
 		}
 
 		private void applyNamingStrategy(Map<String, Object> properties, String key, Object strategy,

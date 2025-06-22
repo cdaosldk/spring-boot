@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2025 the original author or authors.
+ * Copyright 2012-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,7 +36,6 @@ import org.springframework.graphql.data.method.annotation.support.AnnotatedContr
 import org.springframework.graphql.execution.GraphQlSource;
 import org.springframework.graphql.server.GraphQlRSocketHandler;
 import org.springframework.graphql.server.RSocketGraphQlInterceptor;
-import org.springframework.http.codec.json.Jackson2JsonEncoder;
 import org.springframework.messaging.rsocket.annotation.support.RSocketMessageHandler;
 
 /**
@@ -54,10 +53,11 @@ public class GraphQlRSocketAutoConfiguration {
 
 	@Bean
 	@ConditionalOnMissingBean
+	@SuppressWarnings({ "removal", "deprecation" })
 	public GraphQlRSocketHandler graphQlRSocketHandler(ExecutionGraphQlService graphQlService,
 			ObjectProvider<RSocketGraphQlInterceptor> interceptors, ObjectMapper objectMapper) {
 		return new GraphQlRSocketHandler(graphQlService, interceptors.orderedStream().toList(),
-				new Jackson2JsonEncoder(objectMapper));
+				new org.springframework.http.codec.json.Jackson2JsonEncoder(objectMapper));
 	}
 
 	@Bean

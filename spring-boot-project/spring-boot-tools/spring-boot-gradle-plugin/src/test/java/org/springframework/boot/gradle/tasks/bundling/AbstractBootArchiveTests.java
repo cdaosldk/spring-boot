@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2025 the original author or authors.
+ * Copyright 2012-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -330,7 +330,7 @@ abstract class AbstractBootArchiveTests<T extends Jar & BootArchive> {
 		File archiveFile = this.task.getArchiveFile().get().getAsFile();
 		assertThat(Files.readAllBytes(archiveFile.toPath()))
 			.startsWith(new DefaultLaunchScript(null, properties).toByteArray());
-		try (ZipFile zipFile = new ZipFile(archiveFile)) {
+		try (ZipFile zipFile = ZipFile.builder().setFile(archiveFile).get()) {
 			assertThat(zipFile.getEntries().hasMoreElements()).isTrue();
 		}
 		try {
@@ -460,7 +460,7 @@ abstract class AbstractBootArchiveTests<T extends Jar & BootArchive> {
 		this.task.classpath(classpathDirectory);
 		executeTask();
 		File archivePath = this.task.getArchiveFile().get().getAsFile();
-		try (ZipFile zip = new ZipFile(archivePath)) {
+		try (ZipFile zip = ZipFile.builder().setFile(archivePath).get()) {
 			Enumeration<ZipArchiveEntry> entries = zip.getEntries();
 			while (entries.hasMoreElements()) {
 				ZipArchiveEntry entry = entries.nextElement();

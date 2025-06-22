@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2025 the original author or authors.
+ * Copyright 2012-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ package org.springframework.boot.web.server;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 
+import org.springframework.boot.context.properties.ConfigurationPropertiesSource;
 import org.springframework.boot.convert.DurationUnit;
 
 /**
@@ -30,6 +31,7 @@ import org.springframework.boot.convert.DurationUnit;
  * @author Weix Sun
  * @since 2.6.0
  */
+@ConfigurationPropertiesSource
 public class Cookie {
 
 	/**

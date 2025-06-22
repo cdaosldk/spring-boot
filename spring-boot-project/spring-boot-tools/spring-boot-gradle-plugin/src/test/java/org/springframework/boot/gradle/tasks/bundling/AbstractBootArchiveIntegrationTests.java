@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2025 the original author or authors.
+ * Copyright 2012-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -50,6 +50,7 @@ import org.apache.commons.compress.archivers.zip.ZipArchiveEntry;
 import org.apache.commons.compress.archivers.zip.ZipFile;
 import org.gradle.testkit.runner.BuildResult;
 import org.gradle.testkit.runner.TaskOutcome;
+import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.TestTemplate;
 
 import org.springframework.boot.loader.tools.FileUtils;
@@ -578,7 +579,9 @@ abstract class AbstractBootArchiveIntegrationTests {
 	void defaultDirAndFileModesAreUsed() throws IOException {
 		BuildResult result = this.gradleBuild.build(this.taskName);
 		assertThat(result.task(":" + this.taskName).getOutcome()).isEqualTo(TaskOutcome.SUCCESS);
-		try (ZipFile jarFile = new ZipFile(new File(this.gradleBuild.getProjectDir(), "build/libs").listFiles()[0])) {
+		try (ZipFile jarFile = ZipFile.builder()
+			.setFile(new File(this.gradleBuild.getProjectDir(), "build/libs").listFiles()[0])
+			.get()) {
 			Enumeration<ZipArchiveEntry> entries = jarFile.getEntries();
 			while (entries.hasMoreElements()) {
 				ZipArchiveEntry entry = entries.nextElement();
@@ -597,13 +600,16 @@ abstract class AbstractBootArchiveIntegrationTests {
 
 	@TestTemplate
 	void dirModeAndFileModeAreApplied() throws IOException {
+		Assumptions.assumeTrue(this.gradleBuild.gradleVersionIsLessThan("9.0-milestone-1"));
 		BuildResult result = this.gradleBuild.expectDeprecationWarningsWithAtLeastVersion("8.8-rc-1")
 			.expectDeprecationMessages("The CopyProcessingSpec.setDirMode(Integer) method has been deprecated",
 					"The CopyProcessingSpec.setFileMode(Integer) method has been deprecated",
 					"upgrading_version_8.html#unix_file_permissions_deprecated")
 			.build(this.taskName);
 		assertThat(result.task(":" + this.taskName).getOutcome()).isEqualTo(TaskOutcome.SUCCESS);
-		try (ZipFile jarFile = new ZipFile(new File(this.gradleBuild.getProjectDir(), "build/libs").listFiles()[0])) {
+		try (ZipFile jarFile = ZipFile.builder()
+			.setFile(new File(this.gradleBuild.getProjectDir(), "build/libs").listFiles()[0])
+			.get()) {
 			Enumeration<ZipArchiveEntry> entries = jarFile.getEntries();
 			while (entries.hasMoreElements()) {
 				ZipArchiveEntry entry = entries.nextElement();

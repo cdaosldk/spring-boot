@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2025 the original author or authors.
+ * Copyright 2012-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,6 +34,7 @@ import org.springframework.boot.http.client.reactive.ClientHttpConnectorSettings
 import org.springframework.boot.ssl.SslBundles;
 import org.springframework.boot.util.LambdaSafe;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Conditional;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Lazy;
@@ -48,7 +49,8 @@ import org.springframework.http.client.reactive.ClientHttpConnector;
  */
 @AutoConfiguration(after = SslAutoConfiguration.class)
 @ConditionalOnClass({ ClientHttpConnector.class, Mono.class })
-@EnableConfigurationProperties(HttpReactiveClientSettingsProperties.class)
+@Conditional(ConditionalOnClientHttpConnectorBuilderDetection.class)
+@EnableConfigurationProperties(HttpReactiveClientProperties.class)
 public class ClientHttpConnectorAutoConfiguration implements BeanClassLoaderAware {
 
 	private final ClientHttpConnectors connectors;
@@ -56,7 +58,7 @@ public class ClientHttpConnectorAutoConfiguration implements BeanClassLoaderAwar
 	private ClassLoader beanClassLoader;
 
 	ClientHttpConnectorAutoConfiguration(ObjectProvider<SslBundles> sslBundles,
-			HttpReactiveClientSettingsProperties properties) {
+			HttpReactiveClientProperties properties) {
 		this.connectors = new ClientHttpConnectors(sslBundles, properties);
 	}
 

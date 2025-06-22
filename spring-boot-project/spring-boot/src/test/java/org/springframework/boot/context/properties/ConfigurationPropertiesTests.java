@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2025 the original author or authors.
+ * Copyright 2012-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -302,9 +302,12 @@ class ConfigurationPropertiesTests {
 	@Test
 	void loadWhenBindingWithParentContextShouldBind() {
 		AnnotationConfigApplicationContext parent = load(BasicConfiguration.class, "name=parent");
+		assertThat(parent.getEnvironment().getProperty("name")).isEqualTo("parent");
 		this.context = new AnnotationConfigApplicationContext();
 		this.context.setParent(parent);
+		removeSystemProperties();
 		load(new Class<?>[] { BasicConfiguration.class, BasicPropertiesConsumer.class }, "name=child");
+		assertThat(this.context.getEnvironment().getProperty("name")).isEqualTo("child");
 		assertThat(this.context.getBean(BasicProperties.class)).isNotNull();
 		assertThat(parent.getBean(BasicProperties.class)).isNotNull();
 		assertThat(this.context.getBean(BasicPropertiesConsumer.class).getName()).isEqualTo("child");
@@ -1593,7 +1596,7 @@ class ConfigurationPropertiesTests {
 
 		@Bean
 		@ConfigurationPropertiesBinding
-		Converter<String, Person> personConverter() {
+		static Converter<String, Person> personConverter() {
 			return new PersonConverter();
 		}
 
@@ -1604,7 +1607,7 @@ class ConfigurationPropertiesTests {
 
 		@Bean
 		@ConfigurationPropertiesBinding
-		Converter<String, Alien> alienConverter() {
+		static Converter<String, Alien> alienConverter() {
 			return new AlienConverter();
 		}
 
@@ -1625,7 +1628,7 @@ class ConfigurationPropertiesTests {
 
 		@Bean
 		@ConfigurationPropertiesBinding
-		GenericConverter genericPersonConverter() {
+		static GenericConverter genericPersonConverter() {
 			return new GenericPersonConverter();
 		}
 
@@ -1636,7 +1639,7 @@ class ConfigurationPropertiesTests {
 
 		@Bean
 		@ConfigurationPropertiesBinding
-		Formatter<Person> personFormatter() {
+		static Formatter<Person> personFormatter() {
 			return new PersonFormatter();
 		}
 
@@ -3064,7 +3067,7 @@ class ConfigurationPropertiesTests {
 
 		@Bean
 		@ConfigurationPropertiesBinding
-		WithObjectToObjectMethodConverter withObjectToObjectMethodConverter() {
+		static WithObjectToObjectMethodConverter withObjectToObjectMethodConverter() {
 			return new WithObjectToObjectMethodConverter();
 		}
 

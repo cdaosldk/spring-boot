@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2025 the original author or authors.
+ * Copyright 2012-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -118,8 +118,8 @@ final class BuildpackLayersMetadata extends MappedObject {
 
 		private static Buildpacks fromJson(JsonNode node) {
 			Buildpacks buildpacks = new Buildpacks();
-			node.fields()
-				.forEachRemaining((field) -> buildpacks.addBuildpackVersions(field.getKey(),
+			node.properties()
+				.forEach((field) -> buildpacks.addBuildpackVersions(field.getKey(),
 						BuildpackVersions.fromJson(field.getValue())));
 			return buildpacks;
 		}
@@ -140,8 +140,8 @@ final class BuildpackLayersMetadata extends MappedObject {
 
 		private static BuildpackVersions fromJson(JsonNode node) {
 			BuildpackVersions versions = new BuildpackVersions();
-			node.fields()
-				.forEachRemaining((field) -> versions.addBuildpackVersion(field.getKey(),
+			node.properties()
+				.forEach((field) -> versions.addBuildpackVersion(field.getKey(),
 						BuildpackLayerDetails.fromJson(field.getValue())));
 			return versions;
 		}

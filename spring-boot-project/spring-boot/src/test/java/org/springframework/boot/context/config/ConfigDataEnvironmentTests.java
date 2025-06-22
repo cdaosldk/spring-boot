@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2025 the original author or authors.
+ * Copyright 2012-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -230,7 +230,7 @@ class ConfigDataEnvironmentTests {
 						ConfigData.Option.IGNORE_PROFILES);
 				contributors.add(ConfigDataEnvironmentContributor.ofUnboundImport(ConfigDataLocation.of("test"),
 						mock(ConfigDataResource.class), false, data, 0,
-						ConfigDataEnvironmentTests.this.conversionService));
+						ConfigDataEnvironmentTests.this.conversionService, ConfigDataEnvironmentUpdateListener.NONE));
 				return super.createContributors(contributors);
 			}
 
@@ -255,7 +255,7 @@ class ConfigDataEnvironmentTests {
 				ConfigData data = new ConfigData(Collections.singleton(new MapPropertySource("test", source)));
 				contributors.add(ConfigDataEnvironmentContributor.ofUnboundImport(ConfigDataLocation.of("test"),
 						mock(ConfigDataResource.class), false, data, 0,
-						ConfigDataEnvironmentTests.this.conversionService));
+						ConfigDataEnvironmentTests.this.conversionService, ConfigDataEnvironmentUpdateListener.NONE));
 				return super.createContributors(contributors);
 			}
 
@@ -279,7 +279,7 @@ class ConfigDataEnvironmentTests {
 				ConfigData data = new ConfigData(Collections.singleton(new MapPropertySource("test", source)));
 				contributors.add(ConfigDataEnvironmentContributor.ofUnboundImport(ConfigDataLocation.of("test"),
 						mock(ConfigDataResource.class), false, data, 0,
-						ConfigDataEnvironmentTests.this.conversionService));
+						ConfigDataEnvironmentTests.this.conversionService, ConfigDataEnvironmentUpdateListener.NONE));
 				return super.createContributors(contributors);
 			}
 
@@ -304,7 +304,7 @@ class ConfigDataEnvironmentTests {
 						ConfigData.Option.IGNORE_PROFILES);
 				contributors.add(ConfigDataEnvironmentContributor.ofUnboundImport(ConfigDataLocation.of("test"),
 						mock(ConfigDataResource.class), false, data, 0,
-						ConfigDataEnvironmentTests.this.conversionService));
+						ConfigDataEnvironmentTests.this.conversionService, ConfigDataEnvironmentUpdateListener.NONE));
 				return super.createContributors(contributors);
 			}
 

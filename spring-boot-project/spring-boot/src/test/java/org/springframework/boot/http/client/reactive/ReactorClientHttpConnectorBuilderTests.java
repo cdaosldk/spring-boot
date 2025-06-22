@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2025 the original author or authors.
+ * Copyright 2012-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,18 +18,21 @@ package org.springframework.boot.http.client.reactive;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
 
 import io.netty.channel.ChannelOption;
 import org.junit.jupiter.api.Test;
 import reactor.netty.http.client.HttpClient;
 
-import org.springframework.boot.http.client.ClientHttpRequestFactoryBuilder;
 import org.springframework.boot.http.client.ReactorHttpClientBuilder;
+import org.springframework.http.client.ReactorResourceFactory;
 import org.springframework.http.client.reactive.ReactorClientHttpConnector;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.BDDMockito.then;
+import static org.mockito.Mockito.spy;
 
 /**
  * Tests for {@link ReactorClientHttpConnectorBuilder} and
@@ -45,6 +48,25 @@ class ReactorClientHttpConnectorBuilderTests
 	}
 
 	@Test
+	void withHttpClientFactory() {
+		boolean[] called = new boolean[1];
+		Supplier<HttpClient> httpClientFactory = () -> {
+			called[0] = true;
+			return HttpClient.create();
+		};
+		ClientHttpConnectorBuilder.reactor().withHttpClientFactory(httpClientFactory).build();
+		assertThat(called).containsExactly(true);
+	}
+
+	@Test
+	void withReactorResourceFactory() {
+		ReactorResourceFactory resourceFactory = spy(new ReactorResourceFactory());
+		ClientHttpConnectorBuilder.reactor().withReactorResourceFactory(resourceFactory).build();
+		then(resourceFactory).should().getConnectionProvider();
+		then(resourceFactory).should().getLoopResources();
+	}
+
+	@Test
 	void withCustomizers() {
 		List<HttpClient> httpClients = new ArrayList<>();
 		UnaryOperator<HttpClient> httpClientCustomizer1 = (httpClient) -> {
@@ -55,7 +77,7 @@ class ReactorClientHttpConnectorBuilderTests
 			httpClients.add(httpClient);
 			return httpClient;
 		};
-		ClientHttpRequestFactoryBuilder.reactor()
+		ClientHttpConnectorBuilder.reactor()
 			.withHttpClientCustomizer(httpClientCustomizer1)
 			.withHttpClientCustomizer(httpClientCustomizer2)
 			.build();

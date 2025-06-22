@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2025 the original author or authors.
+ * Copyright 2012-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -119,6 +119,11 @@ public enum TestImage {
 	 * A container image suitable for testing Elasticsearch 8.
 	 */
 	ELASTICSEARCH_8("elasticsearch", "8.17.1"),
+
+	/**
+	 * A container image suitable for testing Elasticsearch 9.
+	 */
+	ELASTICSEARCH_9("elasticsearch", "9.0.2"),
 
 	/**
 	 * A container image suitable for testing Grafana OTel LGTM.
@@ -279,7 +284,7 @@ public enum TestImage {
 	/**
 	 * A container image suitable for testing Elasticsearch via Bitnami.
 	 */
-	BITNAMI_ELASTICSEARCH("bitnami/elasticsearch", "8.12.1"),
+	BITNAMI_ELASTICSEARCH("bitnami/elasticsearch", "9.0.2"),
 
 	/**
 	 * A container image suitable for testing MariaDB via Bitnami.

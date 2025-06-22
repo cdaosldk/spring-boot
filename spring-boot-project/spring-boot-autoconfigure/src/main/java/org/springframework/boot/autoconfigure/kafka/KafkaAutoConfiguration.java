@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2025 the original author or authors.
+ * Copyright 2012-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -93,9 +93,8 @@ public class KafkaAutoConfiguration {
 
 	@Bean
 	@ConditionalOnMissingBean(KafkaConnectionDetails.class)
-	PropertiesKafkaConnectionDetails kafkaConnectionDetails(KafkaProperties properties,
-			ObjectProvider<SslBundles> sslBundles) {
-		return new PropertiesKafkaConnectionDetails(properties, sslBundles.getIfAvailable());
+	PropertiesKafkaConnectionDetails kafkaConnectionDetails(ObjectProvider<SslBundles> sslBundles) {
+		return new PropertiesKafkaConnectionDetails(this.properties, sslBundles.getIfAvailable());
 	}
 
 	@Bean
@@ -171,7 +170,7 @@ public class KafkaAutoConfiguration {
 	@Bean
 	@ConditionalOnMissingBean
 	KafkaAdmin kafkaAdmin(KafkaConnectionDetails connectionDetails) {
-		Map<String, Object> properties = this.properties.buildAdminProperties(null);
+		Map<String, Object> properties = this.properties.buildAdminProperties();
 		applyKafkaConnectionDetailsForAdmin(properties, connectionDetails);
 		KafkaAdmin kafkaAdmin = new KafkaAdmin(properties);
 		KafkaProperties.Admin admin = this.properties.getAdmin();

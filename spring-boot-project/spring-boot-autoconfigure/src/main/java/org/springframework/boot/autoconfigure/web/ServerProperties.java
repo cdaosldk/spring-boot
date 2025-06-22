@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2025 the original author or authors.
+ * Copyright 2012-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,6 +26,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 import io.undertow.UndertowOptions;
@@ -40,7 +41,6 @@ import org.springframework.boot.web.server.Http2;
 import org.springframework.boot.web.server.MimeMappings;
 import org.springframework.boot.web.server.Shutdown;
 import org.springframework.boot.web.server.Ssl;
-import org.springframework.boot.web.servlet.server.Encoding;
 import org.springframework.boot.web.servlet.server.Jsp;
 import org.springframework.boot.web.servlet.server.Session;
 import org.springframework.util.StringUtils;
@@ -266,7 +266,6 @@ public class ServerProperties {
 		 */
 		private boolean registerDefaultServlet = false;
 
-		@NestedConfigurationProperty
 		private final Encoding encoding = new Encoding();
 
 		@NestedConfigurationProperty
@@ -413,6 +412,20 @@ public class ServerProperties {
 		private DataSize maxHttpFormPostSize = DataSize.ofMegabytes(2);
 
 		/**
+		 * Maximum per-part header size permitted in a multipart/form-data request.
+		 * Requests that exceed this limit will be rejected. A value of less than 0 means
+		 * no limit.
+		 */
+		private DataSize maxPartHeaderSize = DataSize.ofBytes(512);
+
+		/**
+		 * Maximum total number of parts permitted in a multipart/form-data request.
+		 * Requests that exceed this limit will be rejected. A value of less than 0 means
+		 * no limit.
+		 */
+		private int maxPartCount = 10;
+
+		/**
 		 * Maximum amount of request body to swallow.
 		 */
 		private DataSize maxSwallowSize = DataSize.ofMegabytes(2);
@@ -517,12 +530,28 @@ public class ServerProperties {
 		 * Maximum number of parameters (GET plus POST) that will be automatically parsed
 		 * by the container. A value of less than 0 means no limit.
 		 */
-		private int maxParameterCount = 10000;
+		private int maxParameterCount = 1000;
 
 		/**
 		 * Whether to use APR.
 		 */
 		private UseApr useApr = UseApr.NEVER;
+
+		public DataSize getMaxPartHeaderSize() {
+			return this.maxPartHeaderSize;
+		}
+
+		public void setMaxPartHeaderSize(DataSize maxPartHeaderSize) {
+			this.maxPartHeaderSize = maxPartHeaderSize;
+		}
+
+		public int getMaxPartCount() {
+			return this.maxPartCount;
+		}
+
+		public void setMaxPartCount(int maxPartCount) {
+			this.maxPartCount = maxPartCount;
+		}
 
 		public Accesslog getAccesslog() {
 			return this.accesslog;
@@ -1269,7 +1298,7 @@ public class ServerProperties {
 			/**
 			 * Log format.
 			 */
-			private FORMAT format = FORMAT.NCSA;
+			private Format format = Format.NCSA;
 
 			/**
 			 * Custom log format, see org.eclipse.jetty.server.CustomRequestLog. If
@@ -1310,11 +1339,11 @@ public class ServerProperties {
 				this.enabled = enabled;
 			}
 
-			public FORMAT getFormat() {
+			public Format getFormat() {
 				return this.format;
 			}
 
-			public void setFormat(FORMAT format) {
+			public void setFormat(Format format) {
 				this.format = format;
 			}
 
@@ -1369,7 +1398,7 @@ public class ServerProperties {
 			/**
 			 * Log format for Jetty access logs.
 			 */
-			public enum FORMAT {
+			public enum Format {
 
 				/**
 				 * NCSA format, as defined in CustomRequestLog#NCSA_FORMAT.
@@ -1967,6 +1996,23 @@ public class ServerProperties {
 		 * Ignore X-Forwarded-* headers.
 		 */
 		NONE
+
+	}
+
+	public static class Encoding {
+
+		/**
+		 * Mapping of locale to charset for response encoding.
+		 */
+		private Map<Locale, Charset> mapping;
+
+		public Map<Locale, Charset> getMapping() {
+			return this.mapping;
+		}
+
+		public void setMapping(Map<Locale, Charset> mapping) {
+			this.mapping = mapping;
+		}
 
 	}
 

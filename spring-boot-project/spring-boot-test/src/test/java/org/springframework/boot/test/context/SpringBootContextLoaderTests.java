@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2025 the original author or authors.
+ * Copyright 2012-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -268,7 +268,7 @@ class SpringBootContextLoaderTests {
 			.buildMergedContextConfiguration();
 		RuntimeHints runtimeHints = new RuntimeHints();
 		contextLoader.loadContextForAotProcessing(contextConfiguration, runtimeHints);
-		assertThat(RuntimeHintsPredicates.reflection().onMethod(ConfigWithMain.class, "main").invoke())
+		assertThat(RuntimeHintsPredicates.reflection().onMethodInvocation(ConfigWithMain.class, "main"))
 			.accepts(runtimeHints);
 	}
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2024 the original author or authors.
+ * Copyright 2012-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -167,7 +167,7 @@ class MavenBuild {
 			request.setBaseDirectory(this.temp);
 			request.setJavaHome(new File(System.getProperty("java.home")));
 			request.setProperties(this.properties);
-			request.setGoals(this.goals.isEmpty() ? Collections.singletonList("package") : this.goals);
+			request.addArgs(this.goals.isEmpty() ? Collections.singletonList("package") : this.goals);
 			request.setUserSettingsFile(new File(this.temp, "settings.xml"));
 			request.setUpdateSnapshots(true);
 			request.setBatchMode(true);

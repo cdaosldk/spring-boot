@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2025 the original author or authors.
+ * Copyright 2012-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -152,10 +152,12 @@ class SpringIterableConfigurationPropertySourceTests {
 	}
 
 	@Test
-	void containsDescendantOfWhenSystemEnvironmentPropertySourceShouldLegacyProperty() {
+	void containsDescendantOfWhenSystemEnvironmentPropertySourceShouldSupportLegacyProperty() {
 		Map<String, Object> source = new LinkedHashMap<>();
 		source.put("FOO_BAR_BAZ_BONG", "bing");
 		source.put("FOO_ALPHABRAVO_GAMMA", "delta");
+		source.put("loo_bar_baz_bong", "bing");
+		source.put("loo_alphabravo_gamma", "delta");
 		SystemEnvironmentPropertySource propertySource = new SystemEnvironmentPropertySource(
 				StandardEnvironment.SYSTEM_ENVIRONMENT_PROPERTY_SOURCE_NAME, source);
 		SpringIterableConfigurationPropertySource adapter = new SpringIterableConfigurationPropertySource(
@@ -166,6 +168,27 @@ class SpringIterableConfigurationPropertySourceTests {
 			.isEqualTo(ConfigurationPropertyState.PRESENT);
 		assertThat(adapter.containsDescendantOf(ConfigurationPropertyName.of("foo.blah")))
 			.isEqualTo(ConfigurationPropertyState.ABSENT);
+		assertThat(adapter.containsDescendantOf(ConfigurationPropertyName.of("loo.bar-baz")))
+			.isEqualTo(ConfigurationPropertyState.PRESENT);
+		assertThat(adapter.containsDescendantOf(ConfigurationPropertyName.of("loo.alpha-bravo")))
+			.isEqualTo(ConfigurationPropertyState.PRESENT);
+		assertThat(adapter.containsDescendantOf(ConfigurationPropertyName.of("loo.blah")))
+			.isEqualTo(ConfigurationPropertyState.ABSENT);
+	}
+
+	@Test
+	void getConfigurationPropertyWhenSystemEnvironmentPropertySourceShouldSupportLegacyProperty() {
+		Map<String, Object> source = new LinkedHashMap<>();
+		source.put("TEST_VALUE_UPPER", "upper");
+		source.put("test_value_lower", "lower");
+		SystemEnvironmentPropertySource propertySource = new SystemEnvironmentPropertySource(
+				StandardEnvironment.SYSTEM_ENVIRONMENT_PROPERTY_SOURCE_NAME, source);
+		SpringIterableConfigurationPropertySource adapter = new SpringIterableConfigurationPropertySource(
+				propertySource, true, SystemEnvironmentPropertyMapper.INSTANCE, DefaultPropertyMapper.INSTANCE);
+		assertThat(adapter.getConfigurationProperty(ConfigurationPropertyName.of("test.value-upper")).getValue())
+			.isEqualTo("upper");
+		assertThat(adapter.getConfigurationProperty(ConfigurationPropertyName.of("test.value-lower")).getValue())
+			.isEqualTo("lower");
 	}
 
 	@Test
@@ -237,6 +260,21 @@ class SpringIterableConfigurationPropertySourceTests {
 				false, DefaultPropertyMapper.INSTANCE);
 		assertThat(propertySource.stream().map(ConfigurationPropertyName::toString)).containsExactly("test.map.alpha",
 				"test.map.bravo", "test.map.charlie", "test.map.delta");
+	}
+
+	@Test
+	void cacheRefreshRecalculatesDescendants() {
+		// gh-45639
+		Map<String, Object> map = new LinkedHashMap<>();
+		map.put("one.two.three", "test");
+		EnumerablePropertySource<?> source = new OriginTrackedMapPropertySource("test", map, false);
+		SpringIterableConfigurationPropertySource propertySource = new SpringIterableConfigurationPropertySource(source,
+				false, DefaultPropertyMapper.INSTANCE);
+		assertThat(propertySource.containsDescendantOf(ConfigurationPropertyName.of("one.two")))
+			.isEqualTo(ConfigurationPropertyState.PRESENT);
+		map.put("new", "value");
+		assertThat(propertySource.containsDescendantOf(ConfigurationPropertyName.of("one.two")))
+			.isEqualTo(ConfigurationPropertyState.PRESENT);
 	}
 
 	/**

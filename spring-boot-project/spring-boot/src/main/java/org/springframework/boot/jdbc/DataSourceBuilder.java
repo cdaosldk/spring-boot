@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2025 the original author or authors.
+ * Copyright 2012-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -508,6 +508,9 @@ public final class DataSourceBuilder<T extends DataSource> {
 		}
 
 		private String convertToString(V value) {
+			if (value == null) {
+				return null;
+			}
 			if (String.class.equals(this.type)) {
 				return (String) value;
 			}
@@ -712,7 +715,8 @@ public final class DataSourceBuilder<T extends DataSource> {
 		@SuppressWarnings("unchecked")
 		SimpleDataSourceProperties() {
 			add(DataSourceProperty.URL, SimpleDriverDataSource::getUrl, SimpleDriverDataSource::setUrl);
-			add(DataSourceProperty.DRIVER_CLASS_NAME, Class.class, (dataSource) -> dataSource.getDriver().getClass(),
+			add(DataSourceProperty.DRIVER_CLASS_NAME, Class.class,
+					(dataSource) -> (dataSource.getDriver() != null) ? dataSource.getDriver().getClass() : null,
 					SimpleDriverDataSource::setDriverClass);
 			add(DataSourceProperty.USERNAME, SimpleDriverDataSource::getUsername, SimpleDriverDataSource::setUsername);
 			add(DataSourceProperty.PASSWORD, SimpleDriverDataSource::getPassword, SimpleDriverDataSource::setPassword);

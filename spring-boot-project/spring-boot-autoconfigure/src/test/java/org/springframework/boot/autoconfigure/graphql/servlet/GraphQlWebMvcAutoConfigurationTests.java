@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2025 the original author or authors.
+ * Copyright 2012-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,11 +17,11 @@
 package org.springframework.boot.autoconfigure.graphql.servlet;
 
 import java.time.Duration;
-import java.util.List;
 import java.util.Map;
 
 import graphql.schema.idl.TypeRuntimeWiring;
 import org.assertj.core.api.ThrowingConsumer;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import org.springframework.aot.hint.RuntimeHints;
@@ -81,6 +81,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 		    booksOnSale(minPages: Int) : Book!
 		}
 		""")
+@Disabled("Waiting on compatible release")
 class GraphQlWebMvcAutoConfigurationTests {
 
 	private final WebApplicationContextRunner contextRunner = new WebApplicationContextRunner()
@@ -224,8 +225,8 @@ class GraphQlWebMvcAutoConfigurationTests {
 				.content("{\"query\": \"" + query + "\"}"))
 				.satisfies((result) -> assertThat(result).hasStatusOk()
 					.headers()
-					.containsEntry(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN, List.of("https://example.com"))
-					.containsEntry(HttpHeaders.ACCESS_CONTROL_ALLOW_CREDENTIALS, List.of("true")));
+					.hasValue(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN, "https://example.com")
+					.hasValue(HttpHeaders.ACCESS_CONTROL_ALLOW_CREDENTIALS, "true"));
 		});
 	}
 

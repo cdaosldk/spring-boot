@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2025 the original author or authors.
+ * Copyright 2012-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -895,7 +895,7 @@ class LiquibaseAutoConfigurationTests {
 					<?xml version="1.0" encoding="UTF-8"?>
 					<persistence version="2.0" xmlns="http://java.sun.com/xml/ns/persistence" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://java.sun.com/xml/ns/persistence https://java.sun.com/xml/ns/persistence/persistence_2_0.xsd">
 						<persistence-unit name="manually-configured">
-							<class>org.springframework.boot.autoconfigure.flyway.FlywayAutoConfigurationTests$City</class>
+							<class>org.springframework.boot.autoconfigure.liquibase.LiquibaseAutoConfigurationTests$City</class>
 							<exclude-unlisted-classes>true</exclude-unlisted-classes>
 						</persistence-unit>
 					</persistence>

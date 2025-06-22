@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2025 the original author or authors.
+ * Copyright 2012-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -104,7 +104,7 @@ public class BatchAutoConfiguration {
 
 		private final PlatformTransactionManager transactionManager;
 
-		private final TaskExecutor taskExector;
+		private final TaskExecutor taskExecutor;
 
 		private final BatchProperties properties;
 
@@ -123,7 +123,7 @@ public class BatchAutoConfiguration {
 				ObjectProvider<JobParametersConverter> jobParametersConverter) {
 			this.dataSource = batchDataSource.getIfAvailable(() -> dataSource);
 			this.transactionManager = batchTransactionManager.getIfAvailable(() -> transactionManager);
-			this.taskExector = batchTaskExecutor.getIfAvailable();
+			this.taskExecutor = batchTaskExecutor.getIfAvailable();
 			this.properties = properties;
 			this.batchConversionServiceCustomizers = batchConversionServiceCustomizers.orderedStream().toList();
 			this.executionContextSerializer = executionContextSerializer.getIfAvailable();
@@ -180,7 +180,7 @@ public class BatchAutoConfiguration {
 
 		@Override
 		protected TaskExecutor getTaskExecutor() {
-			return (this.taskExector != null) ? this.taskExector : super.getTaskExecutor();
+			return (this.taskExecutor != null) ? this.taskExecutor : super.getTaskExecutor();
 		}
 
 	}
@@ -202,7 +202,7 @@ public class BatchAutoConfiguration {
 	static class OnBatchDatasourceInitializationCondition extends OnDatabaseInitializationCondition {
 
 		OnBatchDatasourceInitializationCondition() {
-			super("Batch", "spring.batch.jdbc.initialize-schema", "spring.batch.initialize-schema");
+			super("Batch", "spring.batch.jdbc.initialize-schema");
 		}
 
 	}

@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2025 the original author or authors.
+ * Copyright 2012-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,6 +30,7 @@ import org.springframework.boot.task.SimpleAsyncTaskExecutorBuilder;
 import org.springframework.boot.task.SimpleAsyncTaskExecutorCustomizer;
 import org.springframework.boot.task.ThreadPoolTaskExecutorBuilder;
 import org.springframework.boot.task.ThreadPoolTaskExecutorCustomizer;
+import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Conditional;
 import org.springframework.context.annotation.Configuration;
@@ -167,17 +168,16 @@ class TaskExecutorConfigurations {
 	@Configuration(proxyBeanMethods = false)
 	static class BootstrapExecutorConfiguration {
 
-		private static final String BOOTSTRAP_EXECUTOR_NAME = "bootstrapExecutor";
-
 		@Bean
 		static BeanFactoryPostProcessor bootstrapExecutorAliasPostProcessor() {
 			return (beanFactory) -> {
-				boolean hasBootstrapExecutor = beanFactory.containsBean(BOOTSTRAP_EXECUTOR_NAME);
+				boolean hasBootstrapExecutor = beanFactory
+					.containsBean(ConfigurableApplicationContext.BOOTSTRAP_EXECUTOR_BEAN_NAME);
 				boolean hasApplicationTaskExecutor = beanFactory
 					.containsBean(TaskExecutionAutoConfiguration.APPLICATION_TASK_EXECUTOR_BEAN_NAME);
 				if (!hasBootstrapExecutor && hasApplicationTaskExecutor) {
 					beanFactory.registerAlias(TaskExecutionAutoConfiguration.APPLICATION_TASK_EXECUTOR_BEAN_NAME,
-							BOOTSTRAP_EXECUTOR_NAME);
+							ConfigurableApplicationContext.BOOTSTRAP_EXECUTOR_BEAN_NAME);
 				}
 			};
 		}

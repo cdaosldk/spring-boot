@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2024 the original author or authors.
+ * Copyright 2012-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,7 +26,9 @@ import org.gradle.api.Task;
 import org.gradle.api.artifacts.Configuration;
 import org.gradle.api.artifacts.ModuleVersionIdentifier;
 import org.gradle.api.file.FileCollection;
+import org.gradle.api.provider.SetProperty;
 import org.gradle.api.tasks.Classpath;
+import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.TaskAction;
 
 /**
@@ -37,7 +39,7 @@ import org.gradle.api.tasks.TaskAction;
 public abstract class CheckClasspathForProhibitedDependencies extends DefaultTask {
 
 	private static final Set<String> PROHIBITED_GROUPS = Set.of("org.codehaus.groovy", "org.eclipse.jetty.toolchain",
-			"commons-logging", "org.apache.geronimo.specs", "com.sun.activation");
+			"org.apache.geronimo.specs", "com.sun.activation");
 
 	private static final Set<String> PERMITTED_JAVAX_GROUPS = Set.of("javax.batch", "javax.cache", "javax.money");
 
@@ -46,6 +48,9 @@ public abstract class CheckClasspathForProhibitedDependencies extends DefaultTas
 	public CheckClasspathForProhibitedDependencies() {
 		getOutputs().upToDateWhen((task) -> true);
 	}
+
+	@Input
+	public abstract SetProperty<String> getPermittedGroups();
 
 	public void setClasspath(Configuration classpath) {
 		this.classpath = classpath;
@@ -75,8 +80,8 @@ public abstract class CheckClasspathForProhibitedDependencies extends DefaultTas
 	}
 
 	private boolean prohibited(ModuleVersionIdentifier id) {
-		return PROHIBITED_GROUPS.contains(id.getGroup()) || prohibitedJavax(id) || prohibitedSlf4j(id)
-				|| prohibitedJbossSpec(id);
+		return (!getPermittedGroups().get().contains(id.getGroup())) && (PROHIBITED_GROUPS.contains(id.getGroup())
+				|| prohibitedJavax(id) || prohibitedSlf4j(id) || prohibitedJbossSpec(id));
 	}
 
 	private boolean prohibitedSlf4j(ModuleVersionIdentifier id) {

@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2025 the original author or authors.
+ * Copyright 2012-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -51,7 +51,7 @@ class DockerComposeFileTests {
 		DockerComposeFile c2 = DockerComposeFile.of(f1);
 		DockerComposeFile c3 = DockerComposeFile.find(f1.getParentFile());
 		DockerComposeFile c4 = DockerComposeFile.of(f2);
-		assertThat(c1.hashCode()).isEqualTo(c2.hashCode()).isEqualTo(c3.hashCode());
+		assertThat(c1).hasSameHashCodeAs(c2).hasSameHashCodeAs(c3);
 		assertThat(c1).isEqualTo(c1).isEqualTo(c2).isEqualTo(c3).isNotEqualTo(c4);
 	}
 

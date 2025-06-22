@@ -341,7 +341,7 @@
     {
       "name": "spring.application.group",
       "type": "java.lang.String",
-      "description": "Application group."
+      "description": "Application group. Typically used with logging to help identify the application."
     },
     {
       "name": "spring.application.index",
@@ -356,7 +356,7 @@
       "name": "spring.application.name",
       "type": "java.lang.String",
       "sourceType": "org.springframework.boot.context.ContextIdApplicationContextInitializer",
-      "description": "Application name."
+      "description": "Application name. Typically used with logging to help identify the application."
     },
     {
       "name": "spring.application.version",
@@ -613,6 +613,13 @@
       "type": "java.util.List<java.lang.String>",
       "sourceType": "org.springframework.boot.context.config.Profiles",
       "description": "Unconditionally activate the specified comma-separated list of profiles (or list of profiles if using YAML)."
+    },
+    {
+      "name": "spring.profiles.validate",
+      "type": "java.lang.Boolean",
+      "sourceType": "org.springframework.boot.context.config.Profiles",
+      "description": "Whether profiles should be validated to ensure sensible names are used.",
+      "defaultValue": true
     },
     {
       "name": "spring.reactor.debug-agent.enabled",

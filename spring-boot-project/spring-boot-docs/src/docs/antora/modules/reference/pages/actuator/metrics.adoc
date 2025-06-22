@@ -20,7 +20,6 @@ Spring Boot Actuator provides dependency management and auto-configuration for {
 - xref:actuator/metrics.adoc#actuator.metrics.export.simple[] (in-memory)
 - xref:actuator/metrics.adoc#actuator.metrics.export.stackdriver[]
 - xref:actuator/metrics.adoc#actuator.metrics.export.statsd[]
-- xref:actuator/metrics.adoc#actuator.metrics.export.wavefront[]
 
 TIP: To learn more about Micrometer's capabilities, see its {url-micrometer-docs}[reference documentation], in particular the {url-micrometer-docs-concepts}[concepts section].
 
@@ -559,7 +558,7 @@ To enable Prometheus Pushgateway support, add the following dependency to your p
 ----
 <dependency>
 	<groupId>io.prometheus</groupId>
-	<artifactId>io.prometheus:prometheus-metrics-exporter-pushgateway</artifactId>
+	<artifactId>prometheus-metrics-exporter-pushgateway</artifactId>
 </dependency>
 ----
 
@@ -646,43 +645,6 @@ management:
     metrics:
       export:
         flavor: "etsy"
-----
-
-
-
-[[actuator.metrics.export.wavefront]]
-=== Wavefront
-
-The Wavefront registry periodically pushes metrics to {url-micrometer-docs-implementations}/wavefront[Wavefront].
-If you are exporting metrics to https://www.wavefront.com/[Wavefront] directly, you must provide your API token:
-
-[configprops,yaml]
-----
-management:
-  wavefront:
-    api-token: "YOUR_API_TOKEN"
-----
-
-Alternatively, you can use a Wavefront sidecar or an internal proxy in your environment to forward metrics data to the Wavefront API host:
-
-[configprops,yaml]
-----
-management:
-  wavefront:
-    uri: "proxy://localhost:2878"
-----
-
-NOTE: If you publish metrics to a Wavefront proxy (as described in https://docs.wavefront.com/proxies_installing.html[the Wavefront documentation]), the host must be in the `proxy://HOST:PORT` format.
-
-You can also change the interval at which metrics are sent to Wavefront:
-
-[configprops,yaml]
-----
-management:
-  wavefront:
-    metrics:
-      export:
-        step: "30s"
 ----
 
 
@@ -836,13 +798,9 @@ To customize the tags, provide a javadoc:org.springframework.context.annotation.
 
 
 [[actuator.metrics.supported.ssl]]
-=== SSL bundle metrics
+=== SSL Bundle Metrics
 
-Spring Boot Actuator publishes two metrics about SSL bundles:
-
-The metric `ssl.chains` gauges how many certificate chains have been registered.
-The `status` tag can be used to differentiate between valid, not-yet-valid, expired and soon-to-be-expired certificates.
-
+Spring Boot Actuator publishes expiry metrics about SSL bundles.
 The metric `ssl.chain.expiry` gauges the expiry date of each certificate chain in seconds.
 This number will be negative if the chain has already expired.
 This metric is tagged with the following information:
@@ -908,6 +866,9 @@ The following cache libraries are supported:
 * Hazelcast
 * Any compliant JCache (JSR-107) implementation
 * Redis
+
+WARNING: Metrics should be enabled for the auto-configuration to pick them up.
+Refer to the documentation of the cache library you are using for more details.
 
 Metrics are tagged by the name of the cache and by the name of the javadoc:org.springframework.cache.CacheManager[], which is derived from the bean name.
 

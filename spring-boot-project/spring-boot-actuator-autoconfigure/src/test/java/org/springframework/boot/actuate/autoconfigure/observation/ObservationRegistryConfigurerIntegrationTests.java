@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2024 the original author or authors.
+ * Copyright 2012-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -47,7 +47,6 @@ class ObservationRegistryConfigurerIntegrationTests {
 			CalledCustomizers calledCustomizers = context.getBean(CalledCustomizers.class);
 			Customizer1 customizer1 = context.getBean(Customizer1.class);
 			Customizer2 customizer2 = context.getBean(Customizer2.class);
-
 			assertThat(calledCustomizers.getCustomizers()).containsExactly(customizer1, customizer2);
 		});
 	}

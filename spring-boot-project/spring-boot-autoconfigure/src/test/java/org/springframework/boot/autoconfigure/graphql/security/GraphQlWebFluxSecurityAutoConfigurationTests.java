@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2025 the original author or authors.
+ * Copyright 2012-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ import java.util.Collections;
 import java.util.function.Consumer;
 
 import graphql.schema.idl.TypeRuntimeWiring;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Mono;
 
@@ -41,7 +42,6 @@ import org.springframework.graphql.execution.ErrorType;
 import org.springframework.graphql.execution.ReactiveSecurityDataFetcherExceptionResolver;
 import org.springframework.graphql.execution.RuntimeWiringConfigurer;
 import org.springframework.http.MediaType;
-import org.springframework.lang.Nullable;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.config.annotation.method.configuration.EnableReactiveMethodSecurity;
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
@@ -80,6 +80,7 @@ import static org.springframework.security.config.Customizer.withDefaults;
 		    booksOnSale(minPages: Int) : Book!
 		}
 		""")
+@Disabled("Waiting on compatible release")
 class GraphQlWebFluxSecurityAutoConfigurationTests {
 
 	private static final String BASE_URL = "https://spring.example.org/graphql";
@@ -168,7 +169,6 @@ class GraphQlWebFluxSecurityAutoConfigurationTests {
 	static class BookService {
 
 		@PreAuthorize("hasRole('USER')")
-		@Nullable
 		Mono<Book> getBookdById(String id) {
 			return Mono.justOrEmpty(GraphQlTestDataFetchers.getBookById(id));
 		}

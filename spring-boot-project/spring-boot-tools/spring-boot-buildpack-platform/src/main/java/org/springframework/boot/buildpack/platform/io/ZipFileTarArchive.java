@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2025 the original author or authors.
+ * Copyright 2012-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -64,7 +64,7 @@ public class ZipFileTarArchive implements TarArchive {
 	public void writeTo(OutputStream outputStream) throws IOException {
 		TarArchiveOutputStream tar = new TarArchiveOutputStream(outputStream);
 		tar.setLongFileMode(TarArchiveOutputStream.LONGFILE_POSIX);
-		try (ZipFile zipFile = new ZipFile(this.zip)) {
+		try (ZipFile zipFile = ZipFile.builder().setFile(this.zip).get()) {
 			Enumeration<ZipArchiveEntry> entries = zipFile.getEntries();
 			while (entries.hasMoreElements()) {
 				ZipArchiveEntry zipEntry = entries.nextElement();
@@ -75,7 +75,7 @@ public class ZipFileTarArchive implements TarArchive {
 	}
 
 	private void assertArchiveHasEntries(File file) {
-		try (ZipFile zipFile = new ZipFile(file)) {
+		try (ZipFile zipFile = ZipFile.builder().setFile(file).get()) {
 			Assert.state(zipFile.getEntries().hasMoreElements(), () -> "Archive file '" + file + "' is not valid");
 		}
 		catch (IOException ex) {

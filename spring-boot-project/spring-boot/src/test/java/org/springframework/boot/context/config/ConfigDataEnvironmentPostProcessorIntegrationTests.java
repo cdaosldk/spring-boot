@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2025 the original author or authors.
+ * Copyright 2012-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,6 +38,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import org.springframework.boot.SpringApplication;
+import org.springframework.boot.TestApplicationEnvironment;
 import org.springframework.boot.WebApplicationType;
 import org.springframework.boot.context.properties.bind.BindContext;
 import org.springframework.boot.context.properties.bind.BindException;
@@ -459,6 +460,21 @@ class ConfigDataEnvironmentPostProcessorIntegrationTests {
 				"--spring.profiles.active[1]=other");
 		assertThat(context.getEnvironment().getActiveProfiles()).contains("dev", "other");
 		assertThat(context.getEnvironment().getProperty("my.property")).isEqualTo("fromotherpropertiesfile");
+	}
+
+	@Test // gh-45387
+	void runWhenProfileActivatedViaSystemEnvironmentVariableWithPrefix() {
+		this.application.setEnvironmentPrefix("example.prefix");
+		this.application.setEnvironment(new TestApplicationEnvironment() {
+
+			@Override
+			public Map<String, Object> getSystemEnvironment() {
+				return Map.of("EXAMPLE_PREFIX_SPRING_PROFILES_ACTIVE", "other,dev");
+			}
+
+		});
+		ConfigurableApplicationContext context = this.application.run();
+		assertThat(context.getEnvironment().getActiveProfiles()).contains("dev", "other");
 	}
 
 	@Test
@@ -1224,6 +1240,36 @@ class ConfigDataEnvironmentPostProcessorIntegrationTests {
 		assertThat(environment.containsProperty("config-p2")).isTrue();
 		assertThat(environment.getProperty("v1")).isEqualTo("config-p2");
 		assertThat(environment.getProperty("v2")).isEqualTo("root-p2");
+	}
+
+	@Test
+	@WithResource(name = "application.properties", content = """
+			spring.profiles.active=fa!l
+			""")
+	void invalidProfileActivePropertyThrowsException() {
+		assertThatExceptionOfType(BindException.class).isThrownBy(() -> this.application.run())
+			.havingCause()
+			.withMessageContaining("must contain a letter");
+	}
+
+	@Test
+	@WithResource(name = "application.properties", content = """
+			spring.profiles.include=fa!l
+			""")
+	void invalidProfileIncludePropertyThrowsException() {
+		assertThatExceptionOfType(BindException.class).isThrownBy(() -> this.application.run())
+			.havingCause()
+			.withMessageContaining("must contain a letter");
+	}
+
+	@Test
+	@WithResource(name = "application.properties", content = """
+			spring.profiles.active=p!1
+			spring.profiles.include=p!2
+			spring.profiles.validate=false
+			""")
+	void unvalidatedProfileProperties() {
+		assertThatNoException().isThrownBy(() -> this.application.run());
 	}
 
 	private Condition<ConfigurableEnvironment> matchingPropertySource(final String sourceName) {

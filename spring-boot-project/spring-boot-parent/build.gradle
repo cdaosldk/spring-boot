@@ -1,3 +1,19 @@
+/*
+ * Copyright 2012-present the original author or authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the License);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 plugins {
 	id "org.springframework.boot.bom"
 }
@@ -25,21 +41,21 @@ bom {
 			]
 		}
 	}
-	library("AWS Advanced JDBC Wrapper", "2.5.4") {
+	library("AWS Advanced JDBC Wrapper", "2.6.0") {
 		group("software.amazon.jdbc") {
 			modules = [
 				"aws-advanced-jdbc-wrapper"
 			]
 		}
 	}
-	library("C3P0", "0.9.5.5") {
+	library("C3P0", "0.11.1") {
 		group("com.mchange") {
 			modules = [
 				"c3p0"
 			]
 		}
 	}
-	library("ClickHouse", "0.6.5") {
+	library("ClickHouse", "0.9.0") {
 		group("com.clickhouse") {
 			modules = [
 				"clickhouse-jdbc",
@@ -47,28 +63,28 @@ bom {
 			]
 		}
 	}
-	library("Commons Compress", "1.25.0") {
+	library("Commons Compress", "1.27.1") {
 		group("org.apache.commons") {
 			modules = [
 				"commons-compress"
 			]
 		}
 	}
-	library("Commons FileUpload", "1.5") {
+	library("Commons FileUpload", "1.6.0") {
 		group("commons-fileupload") {
 			modules = [
 				"commons-fileupload"
 			]
 		}
 	}
-	library("CycloneDX Gradle Plugin", "2.2.0") {
+	library("CycloneDX Gradle Plugin", "2.3.0") {
 		group("org.cyclonedx") {
 			modules = [
 				"cyclonedx-gradle-plugin"
 			]
 		}
 	}
-	library("Janino", "3.1.10") {
+	library("Janino", "3.1.12") {
 		group("org.codehaus.janino") {
 			bom("janino") {
 				permit("junit:junit")
@@ -86,7 +102,7 @@ bom {
 			]
 		}
 	}
-	library("JNA", "5.13.0") {
+	library("JNA", "5.17.0") {
 		group("net.java.dev.jna") {
 			modules = [
 				"jna-platform"
@@ -110,28 +126,28 @@ bom {
 			]
 		}
 	}
-	library("Maven Common Artifact Filters", "3.3.2") {
+	library("Maven Common Artifact Filters", "3.4.0") {
 		group("org.apache.maven.shared") {
 			modules = [
 				"maven-common-artifact-filters"
 			]
 		}
 	}
-	library("Maven Invoker", "3.2.0") {
+	library("Maven Invoker", "3.3.0") {
 		group("org.apache.maven.shared") {
 			modules = [
 				"maven-invoker"
 			]
 		}
 	}
-	library("Maven Plugin Tools", "3.9.0") {
+	library("Maven Plugin Tools", "3.15.1") {
 		group("org.apache.maven.plugin-tools") {
 			modules = [
 				"maven-plugin-annotations"
 			]
 		}
 	}
-	library("Maven Resolver", "1.9.14") {
+	library("Maven Resolver", "1.9.23") {
 		group("org.apache.maven.resolver") {
 			modules = [
 				"maven-resolver-api",
@@ -144,21 +160,14 @@ bom {
 			]
 		}
 	}
-	library("Maven Shade Plugin", "3.5.0") {
+	library("Maven Shade Plugin", "3.6.0") {
 		group("org.apache.maven.plugins") {
 			modules = [
 				"maven-shade-plugin"
 			]
 		}
 	}
-	library("Micrometer Context Propagation", "1.0.5") {
-		group("io.micrometer") {
-			modules = [
-				"context-propagation"
-			]
-		}
-	}
-	library("MockK", "1.13.5") {
+	library("MockK", "1.14.2") {
 		group("io.mockk") {
 			modules = [
 				"mockk"
@@ -179,7 +188,7 @@ bom {
 			]
 		}
 	}
-	library("OpenTelemetry Logback Appender", "2.7.0-alpha") {
+	library("OpenTelemetry Logback Appender", "2.16.0-alpha") {
 		group("io.opentelemetry.instrumentation") {
 			modules = [
 				"opentelemetry-logback-appender-1.0"
@@ -200,7 +209,7 @@ bom {
 			]
 		}
 	}
-	library("Simple JNDI", "0.23.0") {
+	library("Simple JNDI", "0.25.0") {
 		group("com.github.h-thurow") {
 			modules = [
 				"simple-jndi"

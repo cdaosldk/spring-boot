@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2025 the original author or authors.
+ * Copyright 2012-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@
 package org.springframework.boot.buildpack.platform.docker.configuration;
 
 import org.springframework.util.Assert;
+import org.springframework.util.StringUtils;
 
 /**
  * Docker configuration options.
@@ -24,7 +25,11 @@ import org.springframework.util.Assert;
  * @author Wei Jiang
  * @author Scott Frederick
  * @since 2.4.0
+ * @deprecated since 3.5.0 for removal in 4.0.0 in favor of
+ * {@link org.springframework.boot.buildpack.platform.build.BuilderDockerConfiguration}.
  */
+@Deprecated(since = "3.5.0", forRemoval = true)
+@SuppressWarnings("removal")
 public final class DockerConfiguration {
 
 	private final DockerHostConfiguration host;
@@ -113,6 +118,13 @@ public final class DockerConfiguration {
 				new DockerRegistryUserAuthentication("", "", "", ""), this.bindHostToBuilder);
 	}
 
+	/**
+	 * Docker host configuration.
+	 *
+	 * @deprecated since 3.5.0 for removal in 4.0.0 in favor of
+	 * {@link DockerHostConfiguration}
+	 */
+	@Deprecated(since = "3.5.0", forRemoval = true)
 	public static class DockerHostConfiguration {
 
 		private final String address;
@@ -156,6 +168,24 @@ public final class DockerConfiguration {
 
 		static DockerHostConfiguration forContext(String context) {
 			return new DockerHostConfiguration(null, context, false, null);
+		}
+
+		/**
+		 * Adapts a {@link DockerHostConfiguration} to a
+		 * {@link DockerConnectionConfiguration}.
+		 * @param configuration the configuration to adapt
+		 * @return the adapted configuration
+		 * @since 3.5.0
+		 */
+		public static DockerConnectionConfiguration asConnectionConfiguration(DockerHostConfiguration configuration) {
+			if (configuration != null && StringUtils.hasLength(configuration.context)) {
+				return new DockerConnectionConfiguration.Context(configuration.context);
+			}
+			if (configuration != null && StringUtils.hasLength(configuration.address)) {
+				return new DockerConnectionConfiguration.Host(configuration.address, configuration.secure,
+						configuration.certificatePath);
+			}
+			return null;
 		}
 
 	}

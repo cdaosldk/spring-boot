@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2025 the original author or authors.
+ * Copyright 2012-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,8 +26,8 @@ import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.autoconfigure.ssl.SslAutoConfiguration;
 import org.springframework.boot.http.client.ClientHttpRequestFactoryBuilder;
 import org.springframework.boot.http.client.ClientHttpRequestFactorySettings;
-import org.springframework.boot.http.client.ClientHttpRequestFactorySettings.Redirects;
 import org.springframework.boot.http.client.HttpComponentsClientHttpRequestFactoryBuilder;
+import org.springframework.boot.http.client.HttpRedirects;
 import org.springframework.boot.http.client.JdkClientHttpRequestFactoryBuilder;
 import org.springframework.boot.http.client.JettyClientHttpRequestFactoryBuilder;
 import org.springframework.boot.http.client.ReactorClientHttpRequestFactoryBuilder;
@@ -69,12 +69,11 @@ class HttpClientAutoConfigurationTests {
 	@Test
 	void configuresClientHttpRequestFactorySettings() {
 		this.contextRunner.withPropertyValues(sslPropertyValues().toArray(String[]::new))
-			.withPropertyValues("spring.http.client.settings.redirects=dont-follow",
-					"spring.http.client.settings.connect-timeout=10s", "spring.http.client.settings.read-timeout=20s",
-					"spring.http.client.settings.ssl.bundle=test")
+			.withPropertyValues("spring.http.client.redirects=dont-follow", "spring.http.client.connect-timeout=10s",
+					"spring.http.client.read-timeout=20s", "spring.http.client.ssl.bundle=test")
 			.run((context) -> {
 				ClientHttpRequestFactorySettings settings = context.getBean(ClientHttpRequestFactorySettings.class);
-				assertThat(settings.redirects()).isEqualTo(Redirects.DONT_FOLLOW);
+				assertThat(settings.redirects()).isEqualTo(HttpRedirects.DONT_FOLLOW);
 				assertThat(settings.connectTimeout()).isEqualTo(Duration.ofSeconds(10));
 				assertThat(settings.readTimeout()).isEqualTo(Duration.ofSeconds(20));
 				assertThat(settings.sslBundle().getKey().getAlias()).isEqualTo("alias1");
@@ -88,7 +87,7 @@ class HttpClientAutoConfigurationTests {
 					"spring.http.client.read-timeout=20s", "spring.http.client.ssl.bundle=test")
 			.run((context) -> {
 				ClientHttpRequestFactorySettings settings = context.getBean(ClientHttpRequestFactorySettings.class);
-				assertThat(settings.redirects()).isEqualTo(Redirects.DONT_FOLLOW);
+				assertThat(settings.redirects()).isEqualTo(HttpRedirects.DONT_FOLLOW);
 				assertThat(settings.connectTimeout()).isEqualTo(Duration.ofSeconds(10));
 				assertThat(settings.readTimeout()).isEqualTo(Duration.ofSeconds(20));
 				assertThat(settings.sslBundle().getKey().getAlias()).isEqualTo("alias1");

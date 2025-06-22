@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2025 the original author or authors.
+ * Copyright 2012-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -46,10 +46,10 @@ public class OAuth2ResourceServerProperties {
 		return this.jwt;
 	}
 
-	private final Opaquetoken opaqueToken = new Opaquetoken();
+	private final Opaquetoken opaquetoken = new Opaquetoken();
 
 	public Opaquetoken getOpaquetoken() {
-		return this.opaqueToken;
+		return this.opaquetoken;
 	}
 
 	public static class Jwt {
