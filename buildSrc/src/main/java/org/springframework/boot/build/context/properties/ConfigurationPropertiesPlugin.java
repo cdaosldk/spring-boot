@@ -16,13 +16,14 @@
 
 package org.springframework.boot.build.context.properties;
 
-import java.util.Collections;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
-import org.gradle.api.Task;
 import org.gradle.api.artifacts.Configuration;
+import org.gradle.api.attributes.Category;
+import org.gradle.api.attributes.Usage;
 import org.gradle.api.file.RegularFile;
 import org.gradle.api.plugins.JavaPlugin;
 import org.gradle.api.plugins.JavaPluginExtension;
@@ -56,11 +57,7 @@ import org.springframework.util.StringUtils;
  */
 public class ConfigurationPropertiesPlugin implements Plugin<Project> {
 
-	/**
-	 * Name of the {@link Configuration} that holds the configuration property metadata
-	 * artifact.
-	 */
-	public static final String CONFIGURATION_PROPERTIES_METADATA_CONFIGURATION_NAME = "configurationPropertiesMetadata";
+	private static final String CONFIGURATION_PROPERTIES_METADATA_CONFIGURATION_NAME = "configurationPropertiesMetadata";
 
 	/**
 	 * Name of the {@link CheckAdditionalSpringConfigurationMetadata} task.
@@ -89,8 +86,7 @@ public class ConfigurationPropertiesPlugin implements Plugin<Project> {
 			.getByName(JavaPlugin.ANNOTATION_PROCESSOR_CONFIGURATION_NAME);
 		annotationProcessors.getDependencies()
 			.add(project.getDependencies()
-				.project(Collections.singletonMap("path",
-						":spring-boot-project:spring-boot-tools:spring-boot-configuration-processor")));
+				.project(Map.of("path", ":configuration-metadata:spring-boot-configuration-processor")));
 	}
 
 	private void disableIncrementalCompilation(Project project) {
@@ -108,7 +104,15 @@ public class ConfigurationPropertiesPlugin implements Plugin<Project> {
 			.getByType(JavaPluginExtension.class)
 			.getSourceSets()
 			.getByName(SourceSet.MAIN_SOURCE_SET_NAME);
-		project.getConfigurations().maybeCreate(CONFIGURATION_PROPERTIES_METADATA_CONFIGURATION_NAME);
+		project.getConfigurations()
+			.consumable(CONFIGURATION_PROPERTIES_METADATA_CONFIGURATION_NAME, (configuration) -> {
+				configuration.attributes((attributes) -> {
+					attributes.attribute(Category.CATEGORY_ATTRIBUTE,
+							project.getObjects().named(Category.class, Category.DOCUMENTATION));
+					attributes.attribute(Usage.USAGE_ATTRIBUTE,
+							project.getObjects().named(Usage.class, "configuration-properties-metadata"));
+				});
+			});
 		project.afterEvaluate((evaluatedProject) -> evaluatedProject.getArtifacts()
 			.add(CONFIGURATION_PROPERTIES_METADATA_CONFIGURATION_NAME,
 					mainSourceSet.getJava()
@@ -122,7 +126,7 @@ public class ConfigurationPropertiesPlugin implements Plugin<Project> {
 		JavaCompile compileJava = project.getTasks()
 			.withType(JavaCompile.class)
 			.getByName(JavaPlugin.COMPILE_JAVA_TASK_NAME);
-		((Task) compileJava).getInputs()
+		compileJava.getInputs()
 			.files(project.getTasks().getByName(JavaPlugin.PROCESS_RESOURCES_TASK_NAME))
 			.withPathSensitivity(PathSensitivity.RELATIVE)
 			.withPropertyName("processed resources");

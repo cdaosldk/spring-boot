@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - 'main'
+permissions:
+  contents: read
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
 jobs:
@@ -13,7 +15,7 @@ jobs:
     runs-on: ${{ vars.UBUNTU_MEDIUM || 'ubuntu-latest' }}
     steps:
       - name: Check Out Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: Build and Publish
         id: build-and-publish
         uses: ./.github/actions/build
@@ -42,7 +44,7 @@ jobs:
         uses: ./.github/actions/send-notification
         with:
           build-scan-url: ${{ steps.build-and-publish.outputs.build-scan-url }}
-          run-name: ${{ format('{0} | Linux | Java 17', github.ref_name) }}
+          run-name: ${{ format('{0} | Linux | Java 24', github.ref_name) }}
           status: ${{ job.status }}
           webhook-url: ${{ secrets.GOOGLE_CHAT_WEBHOOK_URL }}
     outputs:
@@ -57,7 +59,7 @@ jobs:
       - name: Run Deploy Docs Workflow
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh workflow run deploy-docs.yml --repo spring-projects/spring-boot -r docs-build -f build-refname=${{ github.ref_name }} -f build-version=${{ needs.build-and-deploy-snapshot.outputs.version }}
+        run: gh workflow run deploy-docs.yml --repo ${{ github.repository }} -r docs-build -f build-refname=${{ github.ref_name }} -f build-version=${{ needs.build-and-deploy-snapshot.outputs.version }}
   verify:
     name: Verify
     needs: build-and-deploy-snapshot

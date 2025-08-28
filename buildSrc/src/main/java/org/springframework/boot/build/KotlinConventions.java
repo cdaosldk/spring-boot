@@ -54,7 +54,7 @@ class KotlinConventions {
 
 	private static final JvmTarget JVM_TARGET = JvmTarget.JVM_17;
 
-	private static final KotlinVersion KOTLIN_VERSION = KotlinVersion.KOTLIN_2_1;
+	private static final KotlinVersion KOTLIN_VERSION = KotlinVersion.KOTLIN_2_2;
 
 	void apply(Project project) {
 		project.getPlugins().withId("org.jetbrains.kotlin.jvm", (plugin) -> {
@@ -70,7 +70,8 @@ class KotlinConventions {
 		compilerOptions.getLanguageVersion().set(KOTLIN_VERSION);
 		compilerOptions.getJvmTarget().set(JVM_TARGET);
 		compilerOptions.getAllWarningsAsErrors().set(true);
-		compilerOptions.getFreeCompilerArgs().addAll("-Xsuppress-version-warnings");
+		compilerOptions.getFreeCompilerArgs()
+			.addAll("-Xsuppress-version-warnings", "-Xannotation-default-target=param-property");
 	}
 
 	private void configureDokkatoo(Project project) {
@@ -101,7 +102,7 @@ class KotlinConventions {
 	private void configureDetekt(Project project) {
 		project.getPlugins().apply(DetektPlugin.class);
 		DetektExtension detekt = project.getExtensions().getByType(DetektExtension.class);
-		detekt.getConfig().setFrom(project.getRootProject().file("src/detekt/config.yml"));
+		detekt.getConfig().setFrom(project.getRootProject().file("config/detekt/config.yml"));
 		project.getTasks().withType(Detekt.class).configureEach((task) -> task.setJvmTarget(JVM_TARGET.getTarget()));
 	}
 
