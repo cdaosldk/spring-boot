@@ -446,7 +446,7 @@ public class KafkaProperties {
 
 		public Map<String, Object> buildProperties() {
 			Properties properties = new Properties();
-			PropertyMapper map = PropertyMapper.get().alwaysApplyingWhenNonNull();
+			PropertyMapper map = PropertyMapper.get();
 			map.from(this::getAutoCommitInterval)
 				.asInt(Duration::toMillis)
 				.to(properties.in(ConsumerConfig.AUTO_COMMIT_INTERVAL_MS_CONFIG));
@@ -636,7 +636,7 @@ public class KafkaProperties {
 
 		public Map<String, Object> buildProperties() {
 			Properties properties = new Properties();
-			PropertyMapper map = PropertyMapper.get().alwaysApplyingWhenNonNull();
+			PropertyMapper map = PropertyMapper.get();
 			map.from(this::getAcks).to(properties.in(ProducerConfig.ACKS_CONFIG));
 			map.from(this::getBatchSize).asInt(DataSize::toBytes).to(properties.in(ProducerConfig.BATCH_SIZE_CONFIG));
 			map.from(this::getBootstrapServers).to(properties.in(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG));
@@ -757,7 +757,7 @@ public class KafkaProperties {
 
 		public Map<String, Object> buildProperties() {
 			Properties properties = new Properties();
-			PropertyMapper map = PropertyMapper.get().alwaysApplyingWhenNonNull();
+			PropertyMapper map = PropertyMapper.get();
 			map.from(this::getClientId).to(properties.in(ProducerConfig.CLIENT_ID_CONFIG));
 			return properties.with(this.ssl, this.security, this.properties);
 		}
@@ -891,7 +891,7 @@ public class KafkaProperties {
 
 		public Map<String, Object> buildProperties() {
 			Properties properties = new Properties();
-			PropertyMapper map = PropertyMapper.get().alwaysApplyingWhenNonNull();
+			PropertyMapper map = PropertyMapper.get();
 			map.from(this::getApplicationId).to(properties.in("application.id"));
 			map.from(this::getBootstrapServers).to(properties.in(CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG));
 			map.from(this::getStateStoreCacheMaxSize)
@@ -1401,7 +1401,7 @@ public class KafkaProperties {
 			if (StringUtils.hasText(bundleName)) {
 				return properties;
 			}
-			PropertyMapper map = PropertyMapper.get().alwaysApplyingWhenNonNull();
+			PropertyMapper map = PropertyMapper.get();
 			map.from(this::getKeyPassword).to(properties.in(SslConfigs.SSL_KEY_PASSWORD_CONFIG));
 			map.from(this::getKeyStoreCertificateChain)
 				.to(properties.in(SslConfigs.SSL_KEYSTORE_CERTIFICATE_CHAIN_CONFIG));
@@ -1539,7 +1539,7 @@ public class KafkaProperties {
 
 		public Map<String, Object> buildProperties() {
 			Properties properties = new Properties();
-			PropertyMapper map = PropertyMapper.get().alwaysApplyingWhenNonNull();
+			PropertyMapper map = PropertyMapper.get();
 			map.from(this::getProtocol).to(properties.in(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG));
 			return properties;
 		}
@@ -1595,26 +1595,31 @@ public class KafkaProperties {
 			public static class Backoff {
 
 				/**
-				 * Canonical backoff period. Used as an initial value in the exponential
-				 * case, and as a minimum value in the uniform case.
+				 * Base delay after the initial invocation. Can be combined with a
+				 * "multiplier" to use an exponential back off strategy.
 				 */
 				private Duration delay = Duration.ofSeconds(1);
 
 				/**
-				 * Multiplier to use for generating the next backoff delay.
+				 * Multiplier for a delay for the next retry attempt, applied to the
+				 * previous delay, starting with the initial delay as well as to the
+				 * applicable jitter for each attempt. Fixed delay by default.
 				 */
-				private double multiplier = 0.0;
+				private double multiplier = 1.0;
 
 				/**
-				 * Maximum wait between retries. If less than the delay then the default
-				 * of 30 seconds is applied.
+				 * Maximum delay for any retry attempt, limiting how far jitter and the
+				 * multiplier can increase the delay.
 				 */
-				private Duration maxDelay = Duration.ZERO;
+				private Duration maxDelay = Duration.ofSeconds(30);
 
 				/**
-				 * Whether to have the backoff delays.
+				 * Jitter value for the base retry attempt, randomly subtracted or added
+				 * to the calculated delay, resulting in a value between 'delay - jitter'
+				 * and 'delay + jitter' but never below the base delay or above the max
+				 * delay.
 				 */
-				private boolean random = false;
+				private Duration jitter = Duration.ZERO;
 
 				public Duration getDelay() {
 					return this.delay;
@@ -1640,12 +1645,12 @@ public class KafkaProperties {
 					this.maxDelay = maxDelay;
 				}
 
-				public boolean isRandom() {
-					return this.random;
+				public Duration getJitter() {
+					return this.jitter;
 				}
 
-				public void setRandom(boolean random) {
-					this.random = random;
+				public void setJitter(Duration jitter) {
+					this.jitter = jitter;
 				}
 
 			}

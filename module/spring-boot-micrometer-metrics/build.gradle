@@ -62,23 +62,32 @@ dependencies {
 	optional("org.apache.kafka:kafka-streams")
 	optional("org.apache.logging.log4j:log4j-core")
 	optional("org.aspectj:aspectjweaver")
-	optional("org.testcontainers:grafana")
-	
+	optional("org.testcontainers:testcontainers-grafana")
+
 	dockerTestImplementation(project(":test-support:spring-boot-docker-test-support"))
 	dockerTestImplementation(testFixtures(project(":core:spring-boot-docker-compose")))
-	dockerTestImplementation("io.rest-assured:rest-assured")
-	dockerTestImplementation("org.testcontainers:junit-jupiter")
+	dockerTestImplementation("org.apache.httpcomponents.client5:httpclient5")
+	dockerTestImplementation("org.springframework:spring-web")
+	dockerTestImplementation("org.testcontainers:testcontainers-junit-jupiter")
 
 	testFixturesImplementation(project(":test-support:spring-boot-test-support"))
 
 	testImplementation(project(":core:spring-boot-test"))
 	testImplementation(project(":test-support:spring-boot-test-support"))
-	testImplementation("com.fasterxml.jackson.core:jackson-databind")
 	testImplementation("io.micrometer:micrometer-registry-atlas")
 	testImplementation("io.micrometer:micrometer-registry-new-relic")
 	testImplementation("io.micrometer:micrometer-registry-prometheus")
 	testImplementation("org.apache.logging.log4j:log4j-to-slf4j")
 	testImplementation("org.springframework:spring-webflux")
+	testImplementation("tools.jackson.core:jackson-databind")
 
 	testRuntimeOnly("ch.qos.logback:logback-classic")
+}
+
+tasks.named("compileTestJava") {
+	options.nullability.checking = "tests"
+}
+
+tasks.named("compileDockerTestJava") {
+	options.nullability.checking = "tests"
 }

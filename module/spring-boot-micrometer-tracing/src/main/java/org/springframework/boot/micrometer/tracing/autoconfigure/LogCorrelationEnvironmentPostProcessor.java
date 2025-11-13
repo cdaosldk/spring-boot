@@ -18,8 +18,8 @@ package org.springframework.boot.micrometer.tracing.autoconfigure;
 
 import org.jspecify.annotations.Nullable;
 
+import org.springframework.boot.EnvironmentPostProcessor;
 import org.springframework.boot.SpringApplication;
-import org.springframework.boot.env.EnvironmentPostProcessor;
 import org.springframework.boot.logging.LoggingSystem;
 import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.core.env.EnumerablePropertySource;
@@ -31,7 +31,7 @@ import org.springframework.util.ClassUtils;
  * {@link EnvironmentPostProcessor} to add a {@link PropertySource} to support log
  * correlation IDs when Micrometer Tracing is present. Adds support for the
  * {@value LoggingSystem#EXPECT_CORRELATION_ID_PROPERTY} property by delegating to
- * {@code management.tracing.enabled}.
+ * {@code management.tracing.export.enabled}.
  *
  * @author Jonatan Ivanov
  * @author Phillip Webb
@@ -67,7 +67,7 @@ class LogCorrelationEnvironmentPostProcessor implements EnvironmentPostProcessor
 		@Override
 		public @Nullable Object getProperty(String name) {
 			if (name.equals(LoggingSystem.EXPECT_CORRELATION_ID_PROPERTY)) {
-				return this.environment.getProperty("management.tracing.enabled", Boolean.class, Boolean.TRUE);
+				return this.environment.getProperty("management.tracing.export.enabled", Boolean.class, Boolean.TRUE);
 			}
 			return null;
 		}

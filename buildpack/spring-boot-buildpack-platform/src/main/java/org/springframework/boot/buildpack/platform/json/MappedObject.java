@@ -30,9 +30,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.jspecify.annotations.Nullable;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.json.JsonMapper;
 
 import org.springframework.util.Assert;
 import org.springframework.util.StreamUtils;
@@ -111,7 +112,7 @@ public class MappedObject {
 			return Collections.emptyList();
 		}
 		List<T> children = new ArrayList<>();
-		node.elements().forEachRemaining((childNode) -> children.add(factory.apply(childNode)));
+		node.values().forEach((childNode) -> children.add(factory.apply(childNode)));
 		return Collections.unmodifiableList(children);
 	}
 
@@ -144,9 +145,9 @@ public class MappedObject {
 			return null;
 		}
 		try {
-			return SharedObjectMapper.get().treeToValue(result, type);
+			return SharedJsonMapper.get().treeToValue(result, type);
 		}
-		catch (IOException ex) {
+		catch (JacksonException ex) {
 			throw new IllegalStateException(ex);
 		}
 	}
@@ -160,7 +161,7 @@ public class MappedObject {
 	 * @throws IOException on IO error
 	 */
 	protected static <T extends MappedObject> T of(String content, Function<JsonNode, T> factory) throws IOException {
-		return of(content, ObjectMapper::readTree, factory);
+		return of(content, JsonMapper::readTree, factory);
 	}
 
 	/**
@@ -173,7 +174,7 @@ public class MappedObject {
 	 */
 	protected static <T extends MappedObject> T of(InputStream content, Function<JsonNode, T> factory)
 			throws IOException {
-		return of(StreamUtils.nonClosing(content), ObjectMapper::readTree, factory);
+		return of(StreamUtils.nonClosing(content), JsonMapper::readTree, factory);
 	}
 
 	/**
@@ -188,8 +189,8 @@ public class MappedObject {
 	 */
 	protected static <T extends MappedObject, C> T of(C content, ContentReader<C> reader, Function<JsonNode, T> factory)
 			throws IOException {
-		ObjectMapper objectMapper = SharedObjectMapper.get();
-		JsonNode node = reader.read(objectMapper, content);
+		JsonMapper jsonMapper = SharedJsonMapper.get();
+		JsonNode node = reader.read(jsonMapper, content);
 		return factory.apply(node);
 	}
 
@@ -203,12 +204,12 @@ public class MappedObject {
 
 		/**
 		 * Read JSON content as a {@link JsonNode}.
-		 * @param objectMapper the source object mapper
+		 * @param jsonMapper the source JSON mapper
 		 * @param content the content to read
 		 * @return a {@link JsonNode}
 		 * @throws IOException on IO error
 		 */
-		JsonNode read(ObjectMapper objectMapper, C content) throws IOException;
+		JsonNode read(JsonMapper jsonMapper, C content) throws IOException;
 
 	}
 

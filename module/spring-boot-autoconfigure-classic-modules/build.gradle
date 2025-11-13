@@ -157,6 +157,9 @@ dependencies {
 	api(project(":module:spring-boot-kafka")) {
 		transitive = false
 	}
+	api(project(":module:spring-boot-kotlinx-serialization-json")) {
+		transitive = false
+	}
 	api(project(":module:spring-boot-ldap")) {
 		transitive = false
 	}
@@ -173,6 +176,12 @@ dependencies {
 		transitive = false
 	}
 	api(project(":module:spring-boot-micrometer-tracing")) {
+		transitive = false
+	}
+	api(project(":module:spring-boot-micrometer-tracing-brave")) {
+		transitive = false
+	}
+	api(project(":module:spring-boot-micrometer-tracing-opentelemetry")) {
 		transitive = false
 	}
 	api(project(":module:spring-boot-mongodb")) {
@@ -235,13 +244,7 @@ dependencies {
 	api(project(":module:spring-boot-session")) {
 		transitive = false
 	}
-	api(project(":module:spring-boot-session-data-mongodb")) {
-		transitive = false
-	}
 	api(project(":module:spring-boot-session-data-redis")) {
-		transitive = false
-	}
-	api(project(":module:spring-boot-session-hazelcast")) {
 		transitive = false
 	}
 	api(project(":module:spring-boot-session-jdbc")) {
@@ -256,7 +259,7 @@ dependencies {
 	api(project(":module:spring-boot-tomcat")) {
 		transitive = false
 	}
-	api(project(":module:spring-boot-tx")) {
+	api(project(":module:spring-boot-transaction")) {
 		transitive = false
 	}
 	api(project(":module:spring-boot-validation")) {

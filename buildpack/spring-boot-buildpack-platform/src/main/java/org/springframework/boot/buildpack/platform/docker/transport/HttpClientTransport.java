@@ -38,10 +38,11 @@ import org.apache.hc.core5.http.HttpHost;
 import org.apache.hc.core5.http.HttpRequest;
 import org.apache.hc.core5.http.io.entity.AbstractHttpEntity;
 import org.jspecify.annotations.Nullable;
+import tools.jackson.core.JacksonException;
 
 import org.springframework.boot.buildpack.platform.io.Content;
 import org.springframework.boot.buildpack.platform.io.IOConsumer;
-import org.springframework.boot.buildpack.platform.json.SharedObjectMapper;
+import org.springframework.boot.buildpack.platform.json.SharedJsonMapper;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 
@@ -167,7 +168,7 @@ abstract class HttpClientTransport implements HttpTransport {
 				Errors errors = (statusCode != 500) ? deserializeErrors(content) : null;
 				Message message = deserializeMessage(content);
 				throw new DockerEngineException(this.host.toHostString(), request.getUri(), statusCode,
-						response.getReasonPhrase(), errors, message);
+						response.getReasonPhrase(), errors, message, content);
 			}
 			return new HttpClientResponse(response);
 		}
@@ -194,9 +195,9 @@ abstract class HttpClientTransport implements HttpTransport {
 			return null;
 		}
 		try {
-			return SharedObjectMapper.get().readValue(content, Errors.class);
+			return SharedJsonMapper.get().readValue(content, Errors.class);
 		}
-		catch (IOException ex) {
+		catch (JacksonException ex) {
 			return null;
 		}
 	}
@@ -206,10 +207,10 @@ abstract class HttpClientTransport implements HttpTransport {
 			return null;
 		}
 		try {
-			Message message = SharedObjectMapper.get().readValue(content, Message.class);
+			Message message = SharedJsonMapper.get().readValue(content, Message.class);
 			return (message.getMessage() != null) ? message : null;
 		}
-		catch (IOException ex) {
+		catch (JacksonException ex) {
 			return null;
 		}
 	}

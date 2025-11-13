@@ -28,10 +28,12 @@ import io.micrometer.observation.ObservationHandler.AllMatchingCompositeObservat
 import io.micrometer.observation.ObservationHandler.FirstMatchingCompositeObservationHandler;
 import io.micrometer.observation.ObservationPredicate;
 import io.micrometer.observation.ObservationRegistry;
+import io.micrometer.observation.aop.ObservationKeyValueAnnotationHandler;
 import io.micrometer.observation.aop.ObservedAspect;
 import org.aspectj.weaver.Advice;
 import org.junit.jupiter.api.Test;
 
+import org.springframework.beans.factory.BeanFactory;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.FilteredClassLoader;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
@@ -61,36 +63,48 @@ class ObservationAutoConfigurationTests {
 		this.contextRunner.withClassLoader(new FilteredClassLoader("io.micrometer.observation")).run((context) -> {
 			assertThat(context).doesNotHaveBean(ObservationRegistry.class);
 			assertThat(context).doesNotHaveBean(ObservedAspect.class);
+			assertThat(context).doesNotHaveBean(ObservationKeyValueAnnotationHandler.class);
 		});
 	}
 
 	@Test
-	void supplyObservationRegistry() {
+	void supplyObservationRegistryAndAspect() {
 		this.contextRunner.run((context) -> {
 			ObservationRegistry observationRegistry = context.getBean(ObservationRegistry.class);
 			Observation.start("test-observation", observationRegistry).stop();
 			assertThat(context).hasSingleBean(ObservedAspect.class);
+			assertThat(context).hasSingleBean(ObservationKeyValueAnnotationHandler.class);
+			assertThat(context.getBean(ObservedAspect.class)).extracting("observationKeyValueAnnotationHandler")
+				.isSameAs(context.getBean(ObservationKeyValueAnnotationHandler.class));
 		});
 	}
 
 	@Test
 	void allowsObservedAspectToBeDisabled() {
-		this.contextRunner.withClassLoader(new FilteredClassLoader(Advice.class))
-			.run((context) -> assertThat(context).doesNotHaveBean(ObservedAspect.class));
+		this.contextRunner.withClassLoader(new FilteredClassLoader(Advice.class)).run((context) -> {
+			assertThat(context).doesNotHaveBean(ObservedAspect.class);
+			assertThat(context).doesNotHaveBean(ObservationKeyValueAnnotationHandler.class);
+		});
 	}
 
 	@Test
 	void allowsObservedAspectToBeDisabledWithProperty() {
-		this.contextRunner.withPropertyValues("management.observations.annotations.enabled=false")
-			.run((context) -> assertThat(context).doesNotHaveBean(ObservedAspect.class));
+		this.contextRunner.withPropertyValues("management.observations.annotations.enabled=false").run((context) -> {
+			assertThat(context).doesNotHaveBean(ObservedAspect.class);
+			assertThat(context).doesNotHaveBean(ObservationKeyValueAnnotationHandler.class);
+		});
 	}
 
 	@Test
 	void allowsObservedAspectToBeCustomized() {
-		this.contextRunner.withUserConfiguration(CustomObservedAspectConfiguration.class)
-			.run((context) -> assertThat(context).hasSingleBean(ObservedAspect.class)
+		this.contextRunner.withUserConfiguration(CustomObservedAspectConfiguration.class).run((context) -> {
+			assertThat(context).hasSingleBean(ObservedAspect.class)
 				.getBean(ObservedAspect.class)
-				.isSameAs(context.getBean("customObservedAspect")));
+				.isSameAs(context.getBean("customObservedAspect"));
+			assertThat(context).hasSingleBean(ObservationKeyValueAnnotationHandler.class)
+				.getBean(ObservationKeyValueAnnotationHandler.class)
+				.isSameAs(context.getBean("customObservationKeyValueAnnotationHandler"));
+		});
 	}
 
 	@Test
@@ -99,11 +113,11 @@ class ObservationAutoConfigurationTests {
 			ObservationRegistry observationRegistry = context.getBean(ObservationRegistry.class);
 			// This is allowed by ObservationPredicates.customPredicate
 			Observation observation = Observation.start("observation1", observationRegistry);
-			assertThat(observation).isNotEqualTo(Observation.NOOP);
+			assertThat(observation.isNoop()).isFalse();
 			observation.stop();
 			// This isn't allowed by ObservationPredicates.customPredicate
 			observation = Observation.start("observation2", observationRegistry);
-			assertThat(observation).isEqualTo(Observation.NOOP);
+			assertThat(observation.isNoop()).isTrue();
 			observation.stop();
 		});
 	}
@@ -115,7 +129,9 @@ class ObservationAutoConfigurationTests {
 			Observation observation = Observation.start("filtered", observationRegistry);
 			observation.stop();
 			observation.getContext().getLowCardinalityKeyValues().forEach((kv) -> System.out.println(kv.getKey()));
-			assertThat(observation.getContext().getLowCardinalityKeyValue("filter").getValue()).isEqualTo("one");
+			KeyValue filter = observation.getContext().getLowCardinalityKeyValue("filter");
+			assertThat(filter).isNotNull();
+			assertThat(filter.getValue()).isEqualTo("one");
 		});
 	}
 
@@ -131,7 +147,9 @@ class ObservationAutoConfigurationTests {
 			ObservationRegistry observationRegistry = context.getBean(ObservationRegistry.class);
 			Observation observation = Observation.start("keyvalues", observationRegistry);
 			observation.stop();
-			assertThat(observation.getContext().getLowCardinalityKeyValue("a").getValue()).isEqualTo("alpha");
+			KeyValue a = observation.getContext().getLowCardinalityKeyValue("a");
+			assertThat(a).isNotNull();
+			assertThat(a.getValue()).isEqualTo("alpha");
 		});
 	}
 
@@ -150,7 +168,7 @@ class ObservationAutoConfigurationTests {
 		this.contextRunner.run((context) -> {
 			ObservationRegistry observationRegistry = context.getBean(ObservationRegistry.class);
 			Observation observation = Observation.start("spring.security.filterchains", observationRegistry);
-			assertThat(observation).isNotEqualTo(Observation.NOOP);
+			assertThat(observation.isNoop()).isFalse();
 			observation.stop();
 		});
 	}
@@ -160,7 +178,7 @@ class ObservationAutoConfigurationTests {
 		this.contextRunner.withPropertyValues("management.observations.enable.spring.security=false").run((context) -> {
 			ObservationRegistry observationRegistry = context.getBean(ObservationRegistry.class);
 			Observation observation = Observation.start("spring.security.filterchains", observationRegistry);
-			assertThat(observation).isEqualTo(Observation.NOOP);
+			assertThat(observation.isNoop()).isTrue();
 			observation.stop();
 		});
 	}
@@ -210,6 +228,12 @@ class ObservationAutoConfigurationTests {
 		@Bean
 		ObservedAspect customObservedAspect(ObservationRegistry observationRegistry) {
 			return new ObservedAspect(observationRegistry);
+		}
+
+		@Bean
+		ObservationKeyValueAnnotationHandler customObservationKeyValueAnnotationHandler(BeanFactory beanFactory,
+				ValueExpressionResolver valueExpressionResolver) {
+			return new ObservationKeyValueAnnotationHandler(beanFactory::getBean, (ignored) -> valueExpressionResolver);
 		}
 
 	}

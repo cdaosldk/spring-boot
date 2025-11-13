@@ -38,8 +38,6 @@ import org.gradle.api.tasks.bundling.Jar;
 import org.gradle.work.DisableCachingByDefault;
 import org.jspecify.annotations.Nullable;
 
-import org.springframework.boot.loader.tools.LoaderImplementation;
-
 /**
  * A custom {@link Jar} task that produces a Spring Boot executable jar.
  *
@@ -145,14 +143,12 @@ public abstract class BootJar extends Jar implements BootArchive {
 
 	@Override
 	protected CopyAction createCopyAction() {
-		LoaderImplementation loaderImplementation = getLoaderImplementation().getOrElse(LoaderImplementation.DEFAULT);
 		LayerResolver layerResolver = null;
 		if (!isLayeredDisabled()) {
 			layerResolver = new LayerResolver(this.resolvedDependencies, this.layered, this::isLibrary);
 		}
 		String jarmodeToolsLocation = isIncludeJarmodeTools() ? LIB_DIRECTORY : null;
-		return this.support.createCopyAction(this, this.resolvedDependencies, loaderImplementation, true, layerResolver,
-				jarmodeToolsLocation);
+		return this.support.createCopyAction(this, this.resolvedDependencies, layerResolver, jarmodeToolsLocation);
 	}
 
 	private boolean isIncludeJarmodeTools() {
@@ -167,21 +163,6 @@ public abstract class BootJar extends Jar implements BootArchive {
 	@Override
 	public void requiresUnpack(Spec<FileTreeElement> spec) {
 		this.support.requiresUnpack(spec);
-	}
-
-	@Override
-	public @Nullable LaunchScriptConfiguration getLaunchScript() {
-		return this.support.getLaunchScript();
-	}
-
-	@Override
-	public void launchScript() {
-		enableLaunchScriptIfNecessary();
-	}
-
-	@Override
-	public void launchScript(Action<LaunchScriptConfiguration> action) {
-		action.execute(enableLaunchScriptIfNecessary());
 	}
 
 	/**
@@ -274,15 +255,6 @@ public abstract class BootJar extends Jar implements BootArchive {
 	protected boolean isLibrary(FileCopyDetails details) {
 		String path = details.getRelativePath().getPathString();
 		return path.startsWith(LIB_DIRECTORY);
-	}
-
-	private LaunchScriptConfiguration enableLaunchScriptIfNecessary() {
-		LaunchScriptConfiguration launchScript = this.support.getLaunchScript();
-		if (launchScript == null) {
-			launchScript = new LaunchScriptConfiguration(this);
-			this.support.setLaunchScript(launchScript);
-		}
-		return launchScript;
 	}
 
 	/**

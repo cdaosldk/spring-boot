@@ -31,7 +31,7 @@ dependencies {
 	app project(path: ":starter:spring-boot-starter", configuration: "mavenRepository")
 	app project(path: ":starter:spring-boot-starter-actuator", configuration: "mavenRepository")
 	app project(path: ":starter:spring-boot-starter-tomcat", configuration: "mavenRepository")
-	app project(path: ":starter:spring-boot-starter-web", configuration: "mavenRepository")
+	app project(path: ":starter:spring-boot-starter-webmvc", configuration: "mavenRepository")
 	app project(path: ":starter:spring-boot-starter-webflux", configuration: "mavenRepository")
 	app project(path: ":build-plugin:spring-boot-gradle-plugin", configuration: "mavenRepository")
 	app project(path: ":module:spring-boot-webflux", configuration: "mavenRepository")
@@ -40,8 +40,7 @@ dependencies {
 	intTestImplementation(project(":starter:spring-boot-starter-webmvc"))
 	intTestImplementation(project(":test-support:spring-boot-test-support"))
 	intTestImplementation(project(":starter:spring-boot-starter-test"))
-	intTestImplementation("org.testcontainers:junit-jupiter")
-	intTestImplementation("org.testcontainers:testcontainers")
+	intTestImplementation("org.testcontainers:testcontainers-junit-jupiter")
 }
 
 tasks.register("syncMavenRepository", Sync) {

@@ -28,10 +28,11 @@ dependencies {
 	implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
 	implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor")
 
-	testImplementation(project(":starter:spring-boot-starter-test"))
-	testImplementation("io.projectreactor:reactor-test")
+	testImplementation(project(":starter:spring-boot-starter-webflux-test"))
 }
 
 architectureCheck {
-	nullMarked = false
+	nullMarked {
+		enabled = false
+	}
 }

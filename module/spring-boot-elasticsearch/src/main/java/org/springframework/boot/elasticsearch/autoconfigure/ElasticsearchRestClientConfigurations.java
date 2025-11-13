@@ -36,7 +36,9 @@ import org.apache.hc.client5.http.impl.auth.BasicCredentialsProvider;
 import org.apache.hc.client5.http.impl.nio.PoolingAsyncClientConnectionManagerBuilder;
 import org.apache.hc.client5.http.ssl.DefaultClientTlsStrategy;
 import org.apache.hc.client5.http.ssl.NoopHostnameVerifier;
+import org.apache.hc.core5.http.Header;
 import org.apache.hc.core5.http.HttpHost;
+import org.apache.hc.core5.http.message.BasicHeader;
 import org.apache.hc.core5.reactor.IOReactorConfig;
 import org.apache.hc.core5.reactor.ssl.SSLBufferMode;
 import org.apache.hc.core5.util.Timeout;
@@ -45,6 +47,7 @@ import org.jspecify.annotations.Nullable;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnSingleCandidate;
 import org.springframework.boot.context.properties.PropertyMapper;
 import org.springframework.boot.elasticsearch.autoconfigure.ElasticsearchConnectionDetails.Node;
@@ -67,6 +70,7 @@ import org.springframework.util.StringUtils;
  * @author Moritz Halbritter
  * @author Andy Wilkinson
  * @author Phillip Webb
+ * @author Laura Trotta
  */
 class ElasticsearchRestClientConfigurations {
 
@@ -99,6 +103,10 @@ class ElasticsearchRestClientConfigurations {
 				.stream()
 				.map((node) -> new HttpHost(node.protocol().getScheme(), node.hostname(), node.port()))
 				.toArray(HttpHost[]::new));
+			if (connectionDetails.getApiKey() != null) {
+				builder.setDefaultHeaders(
+						new Header[] { new BasicHeader("Authorization", "ApiKey " + connectionDetails.getApiKey()), });
+			}
 			builder.setHttpClientConfigCallback((httpClientBuilder) -> builderCustomizers.orderedStream()
 				.forEach((customizer) -> customizer.customize(httpClientBuilder)));
 			builder.setConnectionManagerCallback((connectionManagerBuilder) -> builderCustomizers.orderedStream()
@@ -131,13 +139,14 @@ class ElasticsearchRestClientConfigurations {
 	@Configuration(proxyBeanMethods = false)
 	@ConditionalOnClass(Sniffer.class)
 	@ConditionalOnSingleCandidate(Rest5Client.class)
+	@ConditionalOnProperty(name = "spring.elasticsearch.restclient.sniffer.enabled", matchIfMissing = true)
 	static class RestClientSnifferConfiguration {
 
 		@Bean
 		@ConditionalOnMissingBean
 		Sniffer elasticsearchSniffer(Rest5Client client, ElasticsearchProperties properties) {
 			SnifferBuilder builder = Sniffer.builder(client);
-			PropertyMapper map = PropertyMapper.get().alwaysApplyingWhenNonNull();
+			PropertyMapper map = PropertyMapper.get();
 			Duration interval = properties.getRestclient().getSniffer().getInterval();
 			map.from(interval).asInt(Duration::toMillis).to(builder::setSniffIntervalMillis);
 			Duration delayAfterFailure = properties.getRestclient().getSniffer().getDelayAfterFailure();
@@ -148,8 +157,6 @@ class ElasticsearchRestClientConfigurations {
 	}
 
 	static class DefaultRest5ClientBuilderCustomizer implements Rest5ClientBuilderCustomizer, Ordered {
-
-		private static final PropertyMapper map = PropertyMapper.get();
 
 		private final ElasticsearchProperties properties;
 
@@ -169,6 +176,7 @@ class ElasticsearchRestClientConfigurations {
 		public void customize(HttpAsyncClientBuilder httpClientBuilder) {
 			httpClientBuilder
 				.setDefaultCredentialsProvider(new ConnectionDetailsCredentialsProvider(this.connectionDetails));
+			PropertyMapper map = PropertyMapper.get();
 			map.from(this.properties::isSocketKeepAlive)
 				.to((keepAlive) -> httpClientBuilder
 					.setIOReactorConfig(IOReactorConfig.custom().setSoKeepAlive(keepAlive).build()));
@@ -176,14 +184,11 @@ class ElasticsearchRestClientConfigurations {
 
 		@Override
 		public void customize(ConnectionConfig.Builder connectionConfigBuilder) {
+			PropertyMapper map = PropertyMapper.get();
 			map.from(this.properties::getConnectionTimeout)
-				.whenNonNull()
 				.as(Timeout::of)
 				.to(connectionConfigBuilder::setConnectTimeout);
-			map.from(this.properties::getSocketTimeout)
-				.whenNonNull()
-				.as(Timeout::of)
-				.to(connectionConfigBuilder::setSocketTimeout);
+			map.from(this.properties::getSocketTimeout).as(Timeout::of).to(connectionConfigBuilder::setSocketTimeout);
 		}
 
 		@Override
@@ -273,6 +278,11 @@ class ElasticsearchRestClientConfigurations {
 		@Override
 		public @Nullable String getPassword() {
 			return this.properties.getPassword();
+		}
+
+		@Override
+		public @Nullable String getApiKey() {
+			return this.properties.getApiKey();
 		}
 
 		@Override

@@ -24,12 +24,9 @@ import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.Collection;
 import java.util.Enumeration;
 import java.util.HashSet;
-import java.util.HexFormat;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.jar.JarEntry;
@@ -169,7 +166,6 @@ public abstract class AbstractJarWriter implements LoaderClassesWriter {
 	 * @param location the location of the index file
 	 * @param lines the lines to write
 	 * @throws IOException if the write fails
-	 * @since 2.3.0
 	 */
 	public void writeIndexFile(@Nullable String location, Collection<String> lines) throws IOException {
 		if (location != null) {
@@ -206,13 +202,7 @@ public abstract class AbstractJarWriter implements LoaderClassesWriter {
 
 	@Override
 	public void writeLoaderClasses() throws IOException {
-		writeLoaderClasses(LoaderImplementation.DEFAULT);
-	}
-
-	@Override
-	public void writeLoaderClasses(@Nullable LoaderImplementation loaderImplementation) throws IOException {
-		writeLoaderClasses((loaderImplementation != null) ? loaderImplementation.getJarResourceName()
-				: LoaderImplementation.DEFAULT.getJarResourceName());
+		writeLoaderClasses("META-INF/loader/spring-boot-loader.jar");
 	}
 
 	/**
@@ -326,25 +316,16 @@ public abstract class AbstractJarWriter implements LoaderClassesWriter {
 
 		private static final int BUFFER_SIZE = 32 * 1024;
 
-		private final @Nullable MessageDigest messageDigest;
+		private final boolean unpack;
 
 		private final CRC32 crc = new CRC32();
 
 		private long size;
 
 		StoredEntryPreparator(InputStream inputStream, boolean unpack) throws IOException {
-			this.messageDigest = (unpack) ? sha1Digest() : null;
+			this.unpack = unpack;
 			try (inputStream) {
 				load(inputStream);
-			}
-		}
-
-		private static MessageDigest sha1Digest() {
-			try {
-				return MessageDigest.getInstance("SHA-1");
-			}
-			catch (NoSuchAlgorithmException ex) {
-				throw new IllegalStateException(ex);
 			}
 		}
 
@@ -353,9 +334,6 @@ public abstract class AbstractJarWriter implements LoaderClassesWriter {
 			int bytesRead;
 			while ((bytesRead = inputStream.read(buffer)) != -1) {
 				this.crc.update(buffer, 0, bytesRead);
-				if (this.messageDigest != null) {
-					this.messageDigest.update(buffer, 0, bytesRead);
-				}
 				this.size += bytesRead;
 			}
 		}
@@ -365,8 +343,8 @@ public abstract class AbstractJarWriter implements LoaderClassesWriter {
 			entry.setCompressedSize(this.size);
 			entry.setCrc(this.crc.getValue());
 			entry.setMethod(ZipEntry.STORED);
-			if (this.messageDigest != null) {
-				entry.setComment("UNPACK:" + HexFormat.of().formatHex(this.messageDigest.digest()));
+			if (this.unpack) {
+				entry.setComment("UNPACK");
 			}
 		}
 

@@ -33,10 +33,10 @@ import org.apache.hc.core5.http.HttpHeaders;
 import org.apache.hc.core5.http.HttpHost;
 import org.apache.hc.core5.http.message.BasicHeader;
 import org.apache.hc.core5.http.message.StatusLine;
-import org.json.JSONException;
-import org.json.JSONObject;
 import org.jspecify.annotations.Nullable;
 
+import org.springframework.boot.cli.json.JSONException;
+import org.springframework.boot.cli.json.JSONObject;
 import org.springframework.boot.cli.util.Log;
 import org.springframework.util.FileCopyUtils;
 import org.springframework.util.StringUtils;
@@ -51,14 +51,14 @@ class InitializrService {
 	private static final String FILENAME_HEADER_PREFIX = "filename=\"";
 
 	/**
-	 * Accept header to use to retrieve the json meta-data.
+	 * Accept header to use to retrieve the JSON meta-data.
 	 */
 	public static final String ACCEPT_META_DATA = "application/vnd.initializr.v2.1+"
 			+ "json,application/vnd.initializr.v2+json";
 
 	/**
 	 * Accept header to use to retrieve the service capabilities of the service. If the
-	 * service does not offer such feature, the json meta-data are retrieved instead.
+	 * service does not offer such feature, the JSON meta-data are retrieved instead.
 	 */
 	public static final String ACCEPT_SERVICE_CAPABILITIES = "text/plain," + ACCEPT_META_DATA;
 

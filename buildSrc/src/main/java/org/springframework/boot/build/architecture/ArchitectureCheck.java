@@ -44,6 +44,7 @@ import org.gradle.api.file.FileTree;
 import org.gradle.api.provider.ListProperty;
 import org.gradle.api.provider.Property;
 import org.gradle.api.provider.Provider;
+import org.gradle.api.provider.SetProperty;
 import org.gradle.api.tasks.Classpath;
 import org.gradle.api.tasks.IgnoreEmptyDirectories;
 import org.gradle.api.tasks.Input;
@@ -71,17 +72,21 @@ import org.gradle.api.tasks.VerificationException;
  */
 public abstract class ArchitectureCheck extends DefaultTask {
 
+	private static final String CONDITIONAL_ON_CLASS_ANNOTATION = "org.springframework.boot.autoconfigure.condition.ConditionalOnClass";
+
 	private FileCollection classes;
 
 	public ArchitectureCheck() {
 		getOutputDirectory().convention(getProject().getLayout().getBuildDirectory().dir(getName()));
+		getConditionalOnClassAnnotation().convention(CONDITIONAL_ON_CLASS_ANNOTATION);
 		getRules().addAll(getProhibitObjectsRequireNonNull().convention(true)
 			.map(whenTrue(ArchitectureRules::noClassesShouldCallObjectsRequireNonNull)));
 		getRules().addAll(ArchitectureRules.standard());
-		getRules().addAll(whenMainSources(
-				() -> Collections.singletonList(ArchitectureRules.allBeanMethodsShouldReturnNonPrivateType())));
-		getRules().addAll(and(getNullMarked(), isMainSourceSet()).map(whenTrue(
-				() -> Collections.singletonList(ArchitectureRules.packagesShouldBeAnnotatedWithNullMarked()))));
+		getRules().addAll(whenMainSources(() -> List
+			.of(ArchitectureRules.allBeanMethodsShouldReturnNonPrivateType(), ArchitectureRules
+				.allBeanMethodsShouldNotHaveConditionalOnClassAnnotation(getConditionalOnClassAnnotation().get()))));
+		getRules().addAll(and(getNullMarkedEnabled(), isMainSourceSet()).map(whenTrue(() -> Collections.singletonList(
+				ArchitectureRules.packagesShouldBeAnnotatedWithNullMarked(getNullMarkedIgnoredPackages().get())))));
 		getRuleDescriptions().set(getRules().map(this::asDescriptions));
 	}
 
@@ -109,8 +114,11 @@ public abstract class ArchitectureCheck extends DefaultTask {
 	void checkArchitecture() throws Exception {
 		withCompileClasspath(() -> {
 			JavaClasses javaClasses = new ClassFileImporter().importPaths(classFilesPaths());
-			List<EvaluationResult> violations = evaluate(javaClasses).filter(EvaluationResult::hasViolation).toList();
+			List<EvaluationResult> results = new ArrayList<>();
+			evaluate(javaClasses).forEach(results::add);
+			results.add(new AutoConfigurationChecker().check(javaClasses));
 			File outputFile = getOutputDirectory().file("failure-report.txt").get().getAsFile();
+			List<EvaluationResult> violations = results.stream().filter(EvaluationResult::hasViolation).toList();
 			writeViolationReport(violations, outputFile);
 			if (!violations.isEmpty()) {
 				throw new VerificationException("Architecture check failed. See '" + outputFile + "' for details.");
@@ -196,6 +204,12 @@ public abstract class ArchitectureCheck extends DefaultTask {
 	abstract ListProperty<String> getRuleDescriptions();
 
 	@Internal
-	abstract Property<Boolean> getNullMarked();
+	abstract Property<Boolean> getNullMarkedEnabled();
+
+	@Internal
+	abstract SetProperty<String> getNullMarkedIgnoredPackages();
+
+	@Internal
+	abstract Property<String> getConditionalOnClassAnnotation();
 
 }

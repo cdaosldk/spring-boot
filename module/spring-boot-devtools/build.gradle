@@ -29,13 +29,6 @@ configurations {
 	intTestDependencies {
 		extendsFrom dependencyManagement
 	}
-	propertyDefaults
-}
-
-artifacts {
-	propertyDefaults(file("build/resources/main/org/springframework/boot/devtools/env/devtools-property-defaults.properties")) {
-		builtBy(processResources)
-	}
 }
 
 dependencies {
@@ -55,11 +48,10 @@ dependencies {
 	intTestImplementation(project(":core:spring-boot-autoconfigure"))
 	intTestImplementation(project(":core:spring-boot-test"))
 	intTestImplementation(project(":module:spring-boot-restclient"))
+	intTestImplementation(project(":module:spring-boot-resttestclient"))
 	intTestImplementation(project(":test-support:spring-boot-test-support"))
-	intTestImplementation(project(":module:spring-boot-web-server-test"))
 	intTestImplementation("org.apache.httpcomponents.client5:httpclient5")
 	intTestImplementation("net.bytebuddy:byte-buddy")
-
 
 	intTestRuntimeOnly("org.springframework:spring-web")
 
@@ -118,3 +110,12 @@ tasks.register("syncIntTestDependencies", Sync) {
 intTest {
 	dependsOn syncIntTestDependencies
 }
+
+tasks.named("compileTestJava") {
+	options.nullability.checking = "tests"
+}
+
+tasks.named("compileIntTestJava") {
+	options.nullability.checking = "tests"
+}
+

@@ -21,10 +21,12 @@ import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.Executor;
 import java.util.function.Consumer;
+import java.util.function.UnaryOperator;
 
 import org.jspecify.annotations.Nullable;
 
 import org.springframework.boot.context.properties.PropertyMapper;
+import org.springframework.boot.http.client.HttpClientSettings;
 import org.springframework.boot.http.client.JdkHttpClientBuilder;
 import org.springframework.http.client.reactive.JdkClientHttpConnector;
 import org.springframework.util.Assert;
@@ -61,8 +63,8 @@ public final class JdkClientHttpConnectorBuilder extends AbstractClientHttpConne
 	}
 
 	/**
-	 * Return a new {@link JdkClientHttpConnectorBuilder} uses the given executor with the
-	 * underlying {@link java.net.http.HttpClient.Builder}.
+	 * Return a new {@link JdkClientHttpConnectorBuilder} that uses the given executor
+	 * with the underlying {@link java.net.http.HttpClient.Builder}.
 	 * @param executor the executor to use
 	 * @return a new {@link JdkClientHttpConnectorBuilder} instance
 	 * @since 4.0.0
@@ -83,11 +85,22 @@ public final class JdkClientHttpConnectorBuilder extends AbstractClientHttpConne
 				this.httpClientBuilder.withCustomizer(httpClientCustomizer));
 	}
 
+	/**
+	 * Return a new {@link JdkClientHttpConnectorBuilder} that applies the given
+	 * customizer. This can be useful for applying pre-packaged customizations.
+	 * @param customizer the customizer to apply
+	 * @return a new {@link JdkClientHttpConnectorBuilder}
+	 * @since 4.0.0
+	 */
+	public JdkClientHttpConnectorBuilder with(UnaryOperator<JdkClientHttpConnectorBuilder> customizer) {
+		return customizer.apply(this);
+	}
+
 	@Override
-	protected JdkClientHttpConnector createClientHttpConnector(ClientHttpConnectorSettings settings) {
-		HttpClient httpClient = this.httpClientBuilder.build(asHttpClientSettings(settings.withReadTimeout(null)));
+	protected JdkClientHttpConnector createClientHttpConnector(HttpClientSettings settings) {
+		HttpClient httpClient = this.httpClientBuilder.build(settings.withReadTimeout(null));
 		JdkClientHttpConnector connector = new JdkClientHttpConnector(httpClient);
-		PropertyMapper map = PropertyMapper.get().alwaysApplyingWhenNonNull();
+		PropertyMapper map = PropertyMapper.get();
 		map.from(settings::readTimeout).to(connector::setReadTimeout);
 		return connector;
 	}

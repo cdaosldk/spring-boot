@@ -19,7 +19,7 @@ package org.springframework.boot.security.oauth2.server.resource.autoconfigure.s
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.boot.security.autoconfigure.ConditionalOnDefaultWebSecurity;
+import org.springframework.boot.security.autoconfigure.web.servlet.ConditionalOnDefaultWebSecurity;
 import org.springframework.boot.security.oauth2.server.resource.autoconfigure.OAuth2ResourceServerProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -69,7 +69,7 @@ class OAuth2ResourceServerOpaqueTokenConfiguration {
 
 		@Bean
 		@ConditionalOnBean(OpaqueTokenIntrospector.class)
-		SecurityFilterChain opaqueTokenSecurityFilterChain(HttpSecurity http) throws Exception {
+		SecurityFilterChain opaqueTokenSecurityFilterChain(HttpSecurity http) {
 			http.authorizeHttpRequests((requests) -> requests.anyRequest().authenticated());
 			http.oauth2ResourceServer((resourceServer) -> resourceServer.opaqueToken(withDefaults()));
 			return http.build();

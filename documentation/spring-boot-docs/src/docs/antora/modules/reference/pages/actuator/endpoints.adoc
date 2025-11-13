@@ -401,6 +401,7 @@ For example, javadoc:org.springframework.boot.actuate.endpoint.web.annotation.We
 
 You can write technology-specific extensions by using javadoc:org.springframework.boot.actuate.endpoint.web.annotation.EndpointWebExtension[format=annotation] and javadoc:org.springframework.boot.actuate.endpoint.jmx.annotation.EndpointJmxExtension[format=annotation].
 These annotations let you provide technology-specific operations to augment an existing endpoint.
+An endpoint may have at most one extension of each type.
 
 Finally, if you need access to web-framework-specific functionality, you can implement servlet or Spring javadoc:org.springframework.stereotype.Controller[format=annotation] and javadoc:org.springframework.web.bind.annotation.RestController[format=annotation] endpoints at the cost of them not being available over JMX or when using a different web framework.
 
@@ -413,7 +414,7 @@ Operations on an endpoint receive input through their parameters.
 When exposed over the web, the values for these parameters are taken from the URL's query parameters and from the JSON request body.
 When exposed over JMX, the parameters are mapped to the parameters of the MBean's operations.
 Parameters are required by default.
-They can be made optional by annotating them with either javadoc:org.springframework.boot.actuate.endpoint.annotation.OptionalParameter[format=annotation] or JSpecify's javadoc:org.jspecify.annotations.Nullable[format=annotation].
+They can be made optional by annotating them with JSpecify's javadoc:org.jspecify.annotations.Nullable[format=annotation].
 Kotlin null safety is also supported.
 
 You can map each root property in the JSON request body to a parameter of the endpoint.
@@ -548,7 +549,7 @@ NOTE: Range requests are not supported when using Jersey.
 ==== Web Endpoint Security
 
 An operation on a web endpoint or a web-specific endpoint extension can receive the current javadoc:java.security.Principal[] or javadoc:org.springframework.boot.actuate.endpoint.SecurityContext[] as a method parameter.
-The former is typically used in conjunction with either javadoc:org.springframework.boot.actuate.endpoint.annotation.OptionalParameter[format=annotation] or javadoc:org.jspecify.annotations.Nullable[format=annotation] to provide different behavior for authenticated and unauthenticated users.
+The former is typically used in conjunction with javadoc:org.jspecify.annotations.Nullable[format=annotation] to provide different behavior for authenticated and unauthenticated users.
 The latter is typically used to perform authorization checks by using its `isUserInRole(String)` method.
 
 
@@ -622,7 +623,7 @@ with the `key` listed in the following table:
 | Checks that a connection to javadoc:javax.sql.DataSource[] can be obtained.
 
 | `diskspace`
-| javadoc:org.springframework.boot.actuate.system.DiskSpaceHealthIndicator[]
+| javadoc:org.springframework.boot.health.info.DiskSpaceHealthIndicator[]
 | Checks for low disk space.
 
 | `elasticsearch`
@@ -666,30 +667,32 @@ with the `key` listed in the following table:
 | Checks that a Redis server is up.
 
 | `ssl`
-| javadoc:org.springframework.boot.actuate.ssl.SslHealthIndicator[]
+| javadoc:org.springframework.boot.health.info.SslHealthIndicator[]
 | Checks that SSL certificates are ok.
 |===
 
 TIP: You can disable them all by setting the configprop:management.health.defaults.enabled[] property.
 
 TIP: The `ssl` javadoc:org.springframework.boot.actuate.health.HealthIndicator[] has a "warning threshold" property named configprop:management.health.ssl.certificate-validity-warning-threshold[].
-If an SSL certificate will be invalid within the time span defined by this threshold, the javadoc:org.springframework.boot.actuate.health.HealthIndicator[] will warn you but it will still return HTTP 200 to not disrupt the application.
-You can use this threshold to give yourself enough lead time to rotate the soon to be expired certificate.
+You can use this threshold to give yourself enough lead time to rotate the soon-to-be-expired certificate.
+If an SSL certificate will become invalid within the period defined by this threshold, the javadoc:org.springframework.boot.actuate.health.HealthIndicator[] will report this in the details section of its response where `details.validChains.certificates.[*].validity.status` will have the value `WILL_EXPIRE_SOON`.
 
-Additional javadoc:org.springframework.boot.actuate.health.HealthIndicator[] beans are available but are not enabled by default:
+Additional javadoc:org.springframework.boot.actuate.health.HealthIndicator[] beans are enabled by default:
 
 [cols="3,4,6"]
 |===
 | Key | Name | Description
 
 | `livenessstate`
-| javadoc:org.springframework.boot.actuate.availability.LivenessStateHealthIndicator[]
+| javadoc:org.springframework.boot.health.application.LivenessStateHealthIndicator[]
 | Exposes the "`Liveness`" application availability state.
 
 | `readinessstate`
-| javadoc:org.springframework.boot.actuate.availability.ReadinessStateHealthIndicator[]
+| javadoc:org.springframework.boot.health.application.ReadinessStateHealthIndicator[]
 | Exposes the "`Readiness`" application availability state.
 |===
+
+These can be disabled by using the configprop:management.endpoint.health.probes.enabled[] configuration property.
 
 
 
@@ -930,7 +933,7 @@ Applications deployed on Kubernetes can provide information about their internal
 Depending on https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/[your Kubernetes configuration], the kubelet calls those probes and reacts to the result.
 
 By default, Spring Boot manages your xref:features/spring-application.adoc#features.spring-application.application-availability[Application Availability] state.
-If deployed in a Kubernetes environment, actuator gathers the "`Liveness`" and "`Readiness`" information from the javadoc:org.springframework.boot.availability.ApplicationAvailability[] interface and uses that information in dedicated xref:actuator/endpoints.adoc#actuator.endpoints.health.auto-configured-health-indicators[health indicators]: javadoc:org.springframework.boot.actuate.availability.LivenessStateHealthIndicator[] and javadoc:org.springframework.boot.actuate.availability.ReadinessStateHealthIndicator[].
+If deployed in a Kubernetes environment, actuator gathers the "`Liveness`" and "`Readiness`" information from the javadoc:org.springframework.boot.availability.ApplicationAvailability[] interface and uses that information in dedicated xref:actuator/endpoints.adoc#actuator.endpoints.health.auto-configured-health-indicators[health indicators]: javadoc:org.springframework.boot.health.application.LivenessStateHealthIndicator[] and javadoc:org.springframework.boot.health.application.ReadinessStateHealthIndicator[].
 These indicators are shown on the global health endpoint (`"/actuator/health"`).
 They are also exposed as separate HTTP Probes by using xref:actuator/endpoints.adoc#actuator.endpoints.health.groups[health groups]: `"/actuator/health/liveness"` and `"/actuator/health/readiness"`.
 
@@ -956,8 +959,8 @@ readinessProbe:
 NOTE: `<actuator-port>` should be set to the port that the actuator endpoints are available on.
 It could be the main web server port or a separate management port if the `"management.server.port"` property has been set.
 
-These health groups are automatically enabled only if the application xref:how-to:deployment/cloud.adoc#howto.deployment.cloud.kubernetes[runs in a Kubernetes environment].
-You can enable them in any environment by using the configprop:management.endpoint.health.probes.enabled[] configuration property.
+These health groups are automatically enabled.
+You can disable them by using the configprop:management.endpoint.health.probes.enabled[] configuration property.
 
 NOTE: If an application takes longer to start than the configured liveness period, Kubernetes mentions the `"startupProbe"` as a possible solution.
 Generally speaking, the `"startupProbe"` is not necessarily needed here, as the `"readinessProbe"` fails until all startup tasks are done.
@@ -1257,7 +1260,7 @@ The `info` endpoint publishes information about your process, see javadoc:org.sp
 [[actuator.endpoints.info.ssl-information]]
 === SSL Information
 
-The `info` endpoint publishes information about your SSL certificates (that are configured through xref:features/ssl.adoc#features.ssl.bundles[SSL Bundles]), see javadoc:org.springframework.boot.info.SslInfo[] for more details. This endpoint reuses the "warning threshold" property of javadoc:org.springframework.boot.actuate.ssl.SslHealthIndicator[]: if an SSL certificate will be invalid within the time span defined by this threshold, it will trigger a warning. See the `management.health.ssl.certificate-validity-warning-threshold` property.
+The `info` endpoint publishes information about your SSL certificates (that are configured through xref:features/ssl.adoc#features.ssl.bundles[SSL Bundles]), see javadoc:org.springframework.boot.info.SslInfo[] for more details.
 
 
 

@@ -34,6 +34,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.boot.mongodb.autoconfigure.MongoAutoConfiguration;
 import org.springframework.boot.mongodb.autoconfigure.MongoClientSettingsBuilderCustomizer;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 
 /**
  * {@link EnableAutoConfiguration Auto-configuration} for Mongo metrics.
@@ -48,8 +49,9 @@ import org.springframework.context.annotation.Bean;
 @ConditionalOnBean(MeterRegistry.class)
 public final class MongoMetricsAutoConfiguration {
 
+	@Configuration(proxyBeanMethods = false)
 	@ConditionalOnClass(MongoMetricsCommandListener.class)
-	@ConditionalOnBooleanProperty(name = "management.metrics.mongo.command.enabled", matchIfMissing = true)
+	@ConditionalOnBooleanProperty(name = "management.metrics.mongodb.command.enabled", matchIfMissing = true)
 	static class MongoCommandMetricsConfiguration {
 
 		@Bean
@@ -73,8 +75,9 @@ public final class MongoMetricsAutoConfiguration {
 
 	}
 
+	@Configuration(proxyBeanMethods = false)
 	@ConditionalOnClass(MongoMetricsConnectionPoolListener.class)
-	@ConditionalOnBooleanProperty(name = "management.metrics.mongo.connectionpool.enabled", matchIfMissing = true)
+	@ConditionalOnBooleanProperty(name = "management.metrics.mongodb.connectionpool.enabled", matchIfMissing = true)
 	static class MongoConnectionPoolMetricsConfiguration {
 
 		@Bean

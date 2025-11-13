@@ -54,7 +54,7 @@ import org.springframework.boot.autoconfigure.web.format.WebConversionService;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.context.properties.PropertyMapper;
 import org.springframework.boot.convert.ApplicationConversionService;
-import org.springframework.boot.http.converter.autoconfigure.HttpMessageConverters;
+import org.springframework.boot.http.converter.autoconfigure.ServerHttpMessageConvertersCustomizer;
 import org.springframework.boot.servlet.filter.OrderedFormContentFilter;
 import org.springframework.boot.servlet.filter.OrderedHiddenHttpMethodFilter;
 import org.springframework.boot.servlet.filter.OrderedRequestContextFilter;
@@ -78,7 +78,7 @@ import org.springframework.format.FormatterRegistry;
 import org.springframework.format.support.FormattingConversionService;
 import org.springframework.http.CacheControl;
 import org.springframework.http.MediaType;
-import org.springframework.http.converter.HttpMessageConverter;
+import org.springframework.http.converter.HttpMessageConverters.ServerBuilder;
 import org.springframework.lang.Contract;
 import org.springframework.util.AntPathMatcher;
 import org.springframework.util.Assert;
@@ -200,11 +200,11 @@ public final class WebMvcAutoConfiguration {
 
 		private final ListableBeanFactory beanFactory;
 
-		private final ObjectProvider<HttpMessageConverters> messageConvertersProvider;
-
 		private final ObjectProvider<DispatcherServletPath> dispatcherServletPath;
 
 		private final ObjectProvider<ServletRegistrationBean<?>> servletRegistrations;
+
+		private final ObjectProvider<ServerHttpMessageConvertersCustomizer> httpMessageConvertersCustomizerProvider;
 
 		private final @Nullable ResourceHandlerRegistrationCustomizer resourceHandlerRegistrationCustomizer;
 
@@ -217,7 +217,8 @@ public final class WebMvcAutoConfiguration {
 		private final ObjectProvider<ApiVersionDeprecationHandler> apiVersionDeprecationHandler;
 
 		WebMvcAutoConfigurationAdapter(WebProperties webProperties, WebMvcProperties mvcProperties,
-				ListableBeanFactory beanFactory, ObjectProvider<HttpMessageConverters> messageConvertersProvider,
+				ListableBeanFactory beanFactory,
+				ObjectProvider<ServerHttpMessageConvertersCustomizer> httpMessageConvertersCustomizerProvider,
 				ObjectProvider<ResourceHandlerRegistrationCustomizer> resourceHandlerRegistrationCustomizerProvider,
 				ObjectProvider<DispatcherServletPath> dispatcherServletPath,
 				ObjectProvider<ServletRegistrationBean<?>> servletRegistrations,
@@ -227,7 +228,7 @@ public final class WebMvcAutoConfiguration {
 			this.resourceProperties = webProperties.getResources();
 			this.mvcProperties = mvcProperties;
 			this.beanFactory = beanFactory;
-			this.messageConvertersProvider = messageConvertersProvider;
+			this.httpMessageConvertersCustomizerProvider = httpMessageConvertersCustomizerProvider;
 			this.resourceHandlerRegistrationCustomizer = resourceHandlerRegistrationCustomizerProvider.getIfAvailable();
 			this.dispatcherServletPath = dispatcherServletPath;
 			this.servletRegistrations = servletRegistrations;
@@ -242,10 +243,9 @@ public final class WebMvcAutoConfiguration {
 		}
 
 		@Override
-		@SuppressWarnings("removal")
-		public void configureMessageConverters(List<HttpMessageConverter<?>> converters) {
-			this.messageConvertersProvider
-				.ifAvailable((customConverters) -> converters.addAll(customConverters.getConverters()));
+		public void configureMessageConverters(ServerBuilder builder) {
+			this.httpMessageConvertersCustomizerProvider.orderedStream()
+				.forEach((customizer) -> customizer.customize(builder));
 		}
 
 		@Override
@@ -400,7 +400,7 @@ public final class WebMvcAutoConfiguration {
 
 		@Override
 		public void configureApiVersioning(ApiVersionConfigurer configurer) {
-			PropertyMapper map = PropertyMapper.get().alwaysApplyingWhenNonNull();
+			PropertyMapper map = PropertyMapper.get();
 			Apiversion properties = this.mvcProperties.getApiversion();
 			map.from(properties::getRequired).to(configurer::setVersionRequired);
 			map.from(properties::getDefaultVersion).to(configurer::setDefaultVersion);
@@ -413,7 +413,7 @@ public final class WebMvcAutoConfiguration {
 		}
 
 		private void configureApiVersioningUse(ApiVersionConfigurer configurer, Use use) {
-			PropertyMapper map = PropertyMapper.get().alwaysApplyingWhenNonNull();
+			PropertyMapper map = PropertyMapper.get();
 			map.from(use::getHeader).whenHasText().to(configurer::useRequestHeader);
 			map.from(use::getQueryParameter).whenHasText().to(configurer::useQueryParam);
 			map.from(use::getPathSegment).to(configurer::usePathSegment);

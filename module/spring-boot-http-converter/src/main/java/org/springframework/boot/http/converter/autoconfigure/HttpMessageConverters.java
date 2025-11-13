@@ -53,7 +53,10 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurationSupp
  * @see #HttpMessageConverters(HttpMessageConverter...)
  * @see #HttpMessageConverters(Collection)
  * @see #getConverters()
+ * @deprecated since 4.0 in favor of {@link ClientHttpMessageConvertersCustomizer} and
+ * {@link ServerHttpMessageConvertersCustomizer}.
  */
+@Deprecated(since = "4.0")
 public class HttpMessageConverters implements Iterable<HttpMessageConverter<?>> {
 
 	private static final List<Class<?>> NON_REPLACING_CONVERTERS;
@@ -61,7 +64,7 @@ public class HttpMessageConverters implements Iterable<HttpMessageConverter<?>> 
 	static {
 		List<Class<?>> nonReplacingConverters = new ArrayList<>();
 		addClassIfExists(nonReplacingConverters,
-				"org.springframework.hateoas.server.mvc.TypeConstrainedMappingJackson2HttpMessageConverter");
+				"org.springframework.hateoas.server.mvc.TypeConstrainedJacksonJsonHttpMessageConverter");
 		NON_REPLACING_CONVERTERS = Collections.unmodifiableList(nonReplacingConverters);
 	}
 
@@ -71,9 +74,11 @@ public class HttpMessageConverters implements Iterable<HttpMessageConverter<?>> 
 		MultiValueMap<Class<?>, Class<?>> equivalentConverters = new LinkedMultiValueMap<>();
 		putIfExists(equivalentConverters, "org.springframework.http.converter.json.JacksonJsonHttpMessageConverter",
 				"org.springframework.http.converter.json.MappingJackson2HttpMessageConverter",
-				"org.springframework.http.converter.json.GsonHttpMessageConverter");
+				"org.springframework.http.converter.json.GsonHttpMessageConverter",
+				"org.springframework.http.converter.json.KotlinSerializationJsonHttpMessageConverter");
 		putIfExists(equivalentConverters, "org.springframework.http.converter.json.MappingJackson2HttpMessageConverter",
-				"org.springframework.http.converter.json.GsonHttpMessageConverter");
+				"org.springframework.http.converter.json.GsonHttpMessageConverter",
+				"org.springframework.http.converter.json.KotlinSerializationJsonHttpMessageConverter");
 		EQUIVALENT_CONVERTERS = CollectionUtils.unmodifiableMultiValueMap(equivalentConverters);
 	}
 
@@ -180,7 +185,6 @@ public class HttpMessageConverters implements Iterable<HttpMessageConverter<?>> 
 	 * {@link AllEncompassingFormHttpMessageConverter}.
 	 * @param converters a mutable list of the converters that will be used.
 	 * @return the final converts list to use
-	 * @since 1.3.0
 	 */
 	protected List<HttpMessageConverter<?>> postProcessPartConverters(List<HttpMessageConverter<?>> converters) {
 		return converters;

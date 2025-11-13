@@ -26,6 +26,8 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.UnaryOperator;
+import java.util.stream.Collectors;
 
 import org.gradle.api.tasks.SourceSet;
 import org.gradle.testkit.runner.BuildResult;
@@ -39,7 +41,9 @@ import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 
+import org.springframework.boot.build.architecture.annotations.TestConditionalOnClass;
 import org.springframework.util.ClassUtils;
+import org.springframework.util.CollectionUtils;
 import org.springframework.util.FileSystemUtils;
 import org.springframework.util.StringUtils;
 
@@ -57,13 +61,15 @@ class ArchitectureCheckTests {
 
 	private static final String SPRING_CONTEXT = "org.springframework:spring-context:6.2.9";
 
+	private static final String JUNIT_JUPITER = "org.junit.jupiter:junit-jupiter:5.12.0";
+
 	private static final String SPRING_INTEGRATION_JMX = "org.springframework.integration:spring-integration-jmx:6.5.1";
 
 	private GradleBuild gradleBuild;
 
 	@BeforeEach
 	void setup(@TempDir Path projectDir) {
-		this.gradleBuild = new GradleBuild(projectDir).withNullMarked(false);
+		this.gradleBuild = new GradleBuild(projectDir).withNullMarkedEnabled(false);
 	}
 
 	@ParameterizedTest(name = "{0}")
@@ -178,7 +184,7 @@ class ArchitectureCheckTests {
 	void whenClassCallsObjectsRequireNonNullWithMessageAndProhibitObjectsRequireNonNullIsFalseShouldSucceedAndWriteEmptyReport(
 			Task task) throws IOException {
 		prepareTask(task, "objects/requireNonNullWithString");
-		build(this.gradleBuild.withProhibitObjectsRequireNonNull(task, false), task);
+		build(this.gradleBuild.withProhibitObjectsRequireNonNull(false), task);
 	}
 
 	@ParameterizedTest(name = "{0}")
@@ -193,7 +199,7 @@ class ArchitectureCheckTests {
 	void whenClassCallsObjectsRequireNonNullWithSupplierAndProhibitObjectsRequireNonNullIsFalseShouldSucceedAndWriteEmptyReport(
 			Task task) throws IOException {
 		prepareTask(task, "objects/requireNonNullWithSupplier");
-		build(this.gradleBuild.withProhibitObjectsRequireNonNull(task, false), task);
+		build(this.gradleBuild.withProhibitObjectsRequireNonNull(false), task);
 	}
 
 	@ParameterizedTest(name = "{0}")
@@ -273,14 +279,65 @@ class ArchitectureCheckTests {
 	@Test
 	void whenPackageIsNotAnnotatedWithNullMarkedWithMainSourcesShouldFailAndWriteEmptyReport() throws IOException {
 		prepareTask(Task.CHECK_ARCHITECTURE_MAIN, "nullmarked/notannotated");
-		buildAndFail(this.gradleBuild.withNullMarked(true), Task.CHECK_ARCHITECTURE_MAIN,
+		buildAndFail(this.gradleBuild.withNullMarkedEnabled(true), Task.CHECK_ARCHITECTURE_MAIN,
 				"Package org.springframework.boot.build.architecture.nullmarked.notannotated is not annotated with @NullMarked");
+	}
+
+	@Test
+	void whenPackageIsIgnoredAndNotAnnotatedWithNullMarkedWithMainSourcesShouldSucceedAndWriteEmptyReport()
+			throws IOException {
+		prepareTask(Task.CHECK_ARCHITECTURE_MAIN, "nullmarked/notannotated");
+		build(this.gradleBuild.withNullMarkedEnabled(true)
+			.withNullMarkedIgnoredPackages("org.springframework.boot.build.architecture.nullmarked.notannotated"),
+				Task.CHECK_ARCHITECTURE_MAIN);
 	}
 
 	@Test
 	void whenPackageIsNotAnnotatedWithNullMarkedWithTestSourcesShouldSucceedAndWriteEmptyReport() throws IOException {
 		prepareTask(Task.CHECK_ARCHITECTURE_TEST, "nullmarked/notannotated");
-		build(this.gradleBuild.withNullMarked(true), Task.CHECK_ARCHITECTURE_TEST);
+		build(this.gradleBuild.withNullMarkedEnabled(true), Task.CHECK_ARCHITECTURE_TEST);
+	}
+
+	@Test
+	void whenEnumSourceValueIsInferredShouldSucceedAndWriteEmptyReport() throws IOException {
+		prepareTask(Task.CHECK_ARCHITECTURE_TEST, "junit/enumsource/inferredfromparametertype");
+		build(this.gradleBuild.withDependencies(JUNIT_JUPITER), Task.CHECK_ARCHITECTURE_TEST);
+	}
+
+	@Test
+	void whenEnumSourceValueIsNotTheSameAsTypeOfMethodsFirstParameterShouldSucceedAndWriteEmptyReport()
+			throws IOException {
+		prepareTask(Task.CHECK_ARCHITECTURE_TEST, "junit/enumsource/valuenecessary");
+		build(this.gradleBuild.withDependencies(JUNIT_JUPITER), Task.CHECK_ARCHITECTURE_TEST);
+	}
+
+	@Test
+	void whenEnumSourceValueIsSameAsTypeOfMethodsFirstParameterShouldFailAndWriteReport() throws IOException {
+		prepareTask(Task.CHECK_ARCHITECTURE_TEST, "junit/enumsource/sameasparametertype");
+		buildAndFail(this.gradleBuild.withDependencies(JUNIT_JUPITER), Task.CHECK_ARCHITECTURE_TEST,
+				"method <org.springframework.boot.build.architecture.junit.enumsource.sameasparametertype"
+						+ ".EnumSourceSameAsParameterType.exampleMethod(org.springframework.boot.build."
+						+ "architecture.junit.enumsource.sameasparametertype.EnumSourceSameAsParameterType$Example)>",
+				"should not have a value that is the same as the type of the method's first parameter");
+	}
+
+	@Test
+	void whenConditionalOnClassUsedOnBeanMethodsWithMainSourcesShouldFailAndWriteReport() throws IOException {
+		prepareTask(Task.CHECK_ARCHITECTURE_MAIN, "conditionalonclass", "annotations");
+		GradleBuild gradleBuild = this.gradleBuild.withDependencies(SPRING_CONTEXT)
+			.withConditionalOnClassAnnotation(TestConditionalOnClass.class.getName());
+		buildAndFail(gradleBuild, Task.CHECK_ARCHITECTURE_MAIN,
+				"because @ConditionalOnClass on @Bean methods is ineffective - it doesn't prevent"
+						+ " the method signature from being loaded. Such condition need to be placed"
+						+ " on a @Configuration class, allowing the condition to back off before the type is loaded");
+	}
+
+	@Test
+	void whenConditionalOnClassUsedOnBeanMethodsWithTestSourcesShouldSucceedAndWriteEmptyReport() throws IOException {
+		prepareTask(Task.CHECK_ARCHITECTURE_TEST, "conditionalonclass", "annotations");
+		GradleBuild gradleBuild = this.gradleBuild.withDependencies(SPRING_CONTEXT)
+			.withConditionalOnClassAnnotation(TestConditionalOnClass.class.getName());
+		build(gradleBuild, Task.CHECK_ARCHITECTURE_TEST);
 	}
 
 	private void prepareTask(Task task, String... sourceDirectories) throws IOException {
@@ -298,7 +355,7 @@ class ArchitectureCheckTests {
 	private void build(GradleBuild gradleBuild, Task task) throws IOException {
 		try {
 			BuildResult buildResult = gradleBuild.build(task.toString());
-			assertThat(buildResult.taskPaths(TaskOutcome.SUCCESS)).contains(":" + task);
+			assertThat(buildResult.taskPaths(TaskOutcome.SUCCESS)).as(buildResult.getOutput()).contains(":" + task);
 			assertThat(task.getFailureReport(gradleBuild.getProjectDir())).isEmpty();
 		}
 		catch (UnexpectedBuildFailure ex) {
@@ -314,7 +371,7 @@ class ArchitectureCheckTests {
 	private void buildAndFail(GradleBuild gradleBuild, Task task, String... messages) throws IOException {
 		try {
 			BuildResult buildResult = gradleBuild.buildAndFail(task.toString());
-			assertThat(buildResult.taskPaths(TaskOutcome.FAILED)).contains(":" + task);
+			assertThat(buildResult.taskPaths(TaskOutcome.FAILED)).as(buildResult.getOutput()).contains(":" + task);
 			assertThat(task.getFailureReport(gradleBuild.getProjectDir())).contains(messages);
 		}
 		catch (UnexpectedBuildSuccess ex) {
@@ -359,9 +416,9 @@ class ArchitectureCheckTests {
 
 		private final Set<String> dependencies = new LinkedHashSet<>();
 
-		private final Map<Task, Boolean> prohibitObjectsRequireNonNull = new LinkedHashMap<>();
+		private NullMarkedExtension nullMarkedExtension;
 
-		private Boolean nullMarked;
+		private final Map<Task, TaskConfiguration> taskConfigurations = new LinkedHashMap<>();
 
 		private GradleBuild(Path projectDir) {
 			this.projectDir = projectDir;
@@ -371,17 +428,46 @@ class ArchitectureCheckTests {
 			return this.projectDir;
 		}
 
-		GradleBuild withNullMarked(Boolean nullMarked) {
-			this.nullMarked = nullMarked;
+		GradleBuild withProhibitObjectsRequireNonNull(Boolean prohibitObjectsRequireNonNull) {
+			for (Task task : Task.values()) {
+				configureTask(task, (configuration) -> configuration
+					.withProhibitObjectsRequireNonNull(prohibitObjectsRequireNonNull));
+			}
 			return this;
 		}
 
-		GradleBuild withProhibitObjectsRequireNonNull(Task task, boolean prohibitObjectsRequireNonNull) {
-			this.prohibitObjectsRequireNonNull.put(task, prohibitObjectsRequireNonNull);
+		GradleBuild withConditionalOnClassAnnotation(String annotationName) {
+			for (Task task : Task.values()) {
+				configureTask(task, (configuration) -> configuration.withConditionalOnClassAnnotation(annotationName));
+			}
 			return this;
+		}
+
+		GradleBuild withNullMarkedEnabled(Boolean enabled) {
+			configureNullMarkedExtension((nullMarked) -> nullMarked.withEnabled(enabled));
+			return this;
+		}
+
+		GradleBuild withNullMarkedIgnoredPackages(String... ignorePackages) {
+			configureNullMarkedExtension((nullMarked) -> nullMarked.withIgnoredPackages(ignorePackages));
+			return this;
+		}
+
+		private void configureTask(Task task, UnaryOperator<TaskConfiguration> configurer) {
+			this.taskConfigurations.computeIfAbsent(task, (key) -> new TaskConfiguration(null, null));
+			this.taskConfigurations.compute(task, (key, value) -> configurer.apply(value));
+		}
+
+		private void configureNullMarkedExtension(UnaryOperator<NullMarkedExtension> configurer) {
+			NullMarkedExtension nullMarkedExtension = this.nullMarkedExtension;
+			if (nullMarkedExtension == null) {
+				nullMarkedExtension = new NullMarkedExtension(null, null);
+			}
+			this.nullMarkedExtension = configurer.apply(nullMarkedExtension);
 		}
 
 		GradleBuild withDependencies(String... dependencies) {
+			this.dependencies.clear();
 			this.dependencies.addAll(Arrays.asList(dependencies));
 			return this;
 		}
@@ -410,26 +496,67 @@ class ArchitectureCheckTests {
 			if (!this.dependencies.isEmpty()) {
 				buildFile.append("dependencies {\n");
 				for (String dependency : this.dependencies) {
-					buildFile.append("    implementation '%s'\n".formatted(dependency));
+					buildFile.append("\n    implementation ").append(StringUtils.quote(dependency));
 				}
 				buildFile.append("}\n");
 			}
-			this.prohibitObjectsRequireNonNull.forEach((task, prohibitObjectsRequireNonNull) -> buildFile.append(task)
-				.append(" {\n")
-				.append("    prohibitObjectsRequireNonNull = ")
-				.append(prohibitObjectsRequireNonNull)
-				.append("\n}\n\n"));
-			if (this.nullMarked != null) {
-				buildFile.append("architectureCheck {\n")
-					.append("    nullMarked = ")
-					.append(this.nullMarked)
-					.append("\n}\n");
+			this.taskConfigurations.forEach((task, configuration) -> {
+				buildFile.append(task).append(" {");
+				if (configuration.conditionalOnClassAnnotation() != null) {
+					buildFile.append("\n    conditionalOnClassAnnotation = ")
+						.append(StringUtils.quote(configuration.conditionalOnClassAnnotation()));
+				}
+				if (configuration.prohibitObjectsRequireNonNull() != null) {
+					buildFile.append("\n    prohibitObjectsRequireNonNull = ")
+						.append(configuration.prohibitObjectsRequireNonNull());
+				}
+				buildFile.append("\n}\n");
+			});
+			NullMarkedExtension nullMarkedExtension = this.nullMarkedExtension;
+			if (nullMarkedExtension != null) {
+				buildFile.append("architectureCheck {");
+				buildFile.append("\n    nullMarked {");
+				if (nullMarkedExtension.enabled() != null) {
+					buildFile.append("\n        enabled = ").append(nullMarkedExtension.enabled());
+				}
+				if (!CollectionUtils.isEmpty(nullMarkedExtension.ignoredPackages())) {
+					buildFile.append("\n        ignoredPackages = ")
+						.append(nullMarkedExtension.ignoredPackages()
+							.stream()
+							.map(StringUtils::quote)
+							.collect(Collectors.joining(",", "[", "]")));
+				}
+				buildFile.append("\n     }");
+				buildFile.append("\n}\n\n");
 			}
 			Files.writeString(this.projectDir.resolve("build.gradle"), buildFile, StandardCharsets.UTF_8);
 			return GradleRunner.create()
 				.withProjectDir(this.projectDir.toFile())
 				.withArguments(arguments)
 				.withPluginClasspath();
+		}
+
+		private record NullMarkedExtension(Boolean enabled, Set<String> ignoredPackages) {
+
+			private NullMarkedExtension withEnabled(Boolean enabled) {
+				return new NullMarkedExtension(enabled, this.ignoredPackages);
+			}
+
+			private NullMarkedExtension withIgnoredPackages(String... ignoredPackages) {
+				return new NullMarkedExtension(this.enabled, new LinkedHashSet<>(Arrays.asList(ignoredPackages)));
+			}
+
+		}
+
+		private record TaskConfiguration(Boolean prohibitObjectsRequireNonNull, String conditionalOnClassAnnotation) {
+
+			private TaskConfiguration withConditionalOnClassAnnotation(String annotationName) {
+				return new TaskConfiguration(this.prohibitObjectsRequireNonNull, annotationName);
+			}
+
+			private TaskConfiguration withProhibitObjectsRequireNonNull(Boolean prohibitObjectsRequireNonNull) {
+				return new TaskConfiguration(prohibitObjectsRequireNonNull, this.conditionalOnClassAnnotation);
+			}
 		}
 
 	}

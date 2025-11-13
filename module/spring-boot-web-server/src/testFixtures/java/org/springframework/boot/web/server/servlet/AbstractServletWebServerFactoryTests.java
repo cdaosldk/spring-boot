@@ -106,6 +106,7 @@ import org.awaitility.Awaitility;
 import org.eclipse.jetty.client.ContentResponse;
 import org.eclipse.jetty.http2.client.HTTP2Client;
 import org.eclipse.jetty.http2.client.transport.HttpClientTransportOverHTTP2;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
@@ -712,21 +713,23 @@ public abstract class AbstractServletWebServerFactoryTests {
 		assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
 	}
 
-	protected Ssl getSsl(ClientAuth clientAuth, String keyPassword, String keyStore) {
+	protected Ssl getSsl(@Nullable ClientAuth clientAuth, @Nullable String keyPassword, @Nullable String keyStore) {
 		return getSsl(clientAuth, keyPassword, keyStore, null, null, null);
 	}
 
-	protected Ssl getSsl(ClientAuth clientAuth, String keyPassword, String keyAlias, String keyStore) {
+	protected Ssl getSsl(@Nullable ClientAuth clientAuth, @Nullable String keyPassword, @Nullable String keyAlias,
+			@Nullable String keyStore) {
 		return getSsl(clientAuth, keyPassword, keyAlias, keyStore, null, null, null);
 	}
 
-	protected Ssl getSsl(ClientAuth clientAuth, String keyPassword, String keyStore, String trustStore,
-			String[] supportedProtocols, String[] ciphers) {
+	protected Ssl getSsl(@Nullable ClientAuth clientAuth, @Nullable String keyPassword, @Nullable String keyStore,
+			@Nullable String trustStore, String @Nullable [] supportedProtocols, String @Nullable [] ciphers) {
 		return getSsl(clientAuth, keyPassword, null, keyStore, trustStore, supportedProtocols, ciphers);
 	}
 
-	private Ssl getSsl(ClientAuth clientAuth, String keyPassword, String keyAlias, String keyStore, String trustStore,
-			String[] supportedProtocols, String[] ciphers) {
+	private Ssl getSsl(@Nullable ClientAuth clientAuth, @Nullable String keyPassword, @Nullable String keyAlias,
+			@Nullable String keyStore, @Nullable String trustStore, String @Nullable [] supportedProtocols,
+			String @Nullable [] ciphers) {
 		Ssl ssl = new Ssl();
 		ssl.setClientAuth(clientAuth);
 		if (keyPassword != null) {
@@ -1507,7 +1510,7 @@ public abstract class AbstractServletWebServerFactoryTests {
 
 	protected abstract Map<String, String> getActualMimeMappings();
 
-	protected abstract Charset getCharset(Locale locale);
+	protected abstract @Nullable Charset getCharset(Locale locale);
 
 	protected void addTestTxtFile(ConfigurableServletWebServerFactory factory) throws IOException {
 		FileCopyUtils.copy("test", new FileWriter(new File(this.tempDir, "test.txt")));
@@ -1588,7 +1591,7 @@ public abstract class AbstractServletWebServerFactoryTests {
 
 	protected abstract ConfigurableServletWebServerFactory getFactory();
 
-	protected abstract org.apache.jasper.servlet.JspServlet getJspServlet() throws Exception;
+	protected abstract org.apache.jasper.servlet.@Nullable JspServlet getJspServlet() throws Exception;
 
 	protected ServletContextInitializer exampleServletRegistration() {
 		return new ServletRegistrationBean<>(new ExampleServlet(), "/hello");

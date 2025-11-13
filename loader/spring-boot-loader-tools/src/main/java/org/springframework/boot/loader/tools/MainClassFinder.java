@@ -62,6 +62,8 @@ public abstract class MainClassFinder {
 
 	private static final Type MAIN_METHOD_TYPE = Type.getMethodType(Type.VOID_TYPE, STRING_ARRAY_TYPE);
 
+	private static final Type PARAMETERLESS_MAIN_METHOD_TYPE = Type.getMethodType(Type.VOID_TYPE);
+
 	private static final String MAIN_METHOD_NAME = "main";
 
 	private static final FileFilter CLASS_FILE_FILTER = MainClassFinder::isClassFile;
@@ -171,7 +173,7 @@ public abstract class MainClassFinder {
 	 * @return the main class or {@code null}
 	 * @throws IOException if the jar file cannot be read
 	 */
-	public static @Nullable String findMainClass(JarFile jarFile, String classesLocation) throws IOException {
+	public static @Nullable String findMainClass(JarFile jarFile, @Nullable String classesLocation) throws IOException {
 		return doWithMainClasses(jarFile, classesLocation, MainClass::getName);
 	}
 
@@ -182,7 +184,8 @@ public abstract class MainClassFinder {
 	 * @return the main class or {@code null}
 	 * @throws IOException if the jar file cannot be read
 	 */
-	public static @Nullable String findSingleMainClass(JarFile jarFile, String classesLocation) throws IOException {
+	public static @Nullable String findSingleMainClass(JarFile jarFile, @Nullable String classesLocation)
+			throws IOException {
 		return findSingleMainClass(jarFile, classesLocation, null);
 	}
 
@@ -197,7 +200,7 @@ public abstract class MainClassFinder {
 	 * @return the main class or {@code null}
 	 * @throws IOException if the jar file cannot be read
 	 */
-	public static @Nullable String findSingleMainClass(JarFile jarFile, String classesLocation,
+	public static @Nullable String findSingleMainClass(JarFile jarFile, @Nullable String classesLocation,
 			@Nullable String annotationName) throws IOException {
 		SingleMainClassCallback callback = new SingleMainClassCallback(annotationName);
 		MainClassFinder.doWithMainClasses(jarFile, classesLocation, callback);
@@ -213,8 +216,8 @@ public abstract class MainClassFinder {
 	 * @return the first callback result or {@code null}
 	 * @throws IOException in case of I/O errors
 	 */
-	static <T> @Nullable T doWithMainClasses(JarFile jarFile, String classesLocation, MainClassCallback<T> callback)
-			throws IOException {
+	static <T> @Nullable T doWithMainClasses(JarFile jarFile, @Nullable String classesLocation,
+			MainClassCallback<T> callback) throws IOException {
 		List<JarEntry> classEntries = getClassEntries(jarFile, classesLocation);
 		classEntries.sort(new ClassEntryComparator());
 		for (JarEntry entry : classEntries) {
@@ -292,8 +295,18 @@ public abstract class MainClassFinder {
 
 		private boolean mainMethodFound;
 
+		private boolean java25OrLater = false;
+
 		ClassDescriptor() {
 			super(SpringAsmInfo.ASM_VERSION);
+		}
+
+		@Override
+		public void visit(int version, int access, String name, String signature, String superName,
+				String[] interfaces) {
+			if (version >= 69) {
+				this.java25OrLater = true;
+			}
 		}
 
 		@Override
@@ -305,11 +318,22 @@ public abstract class MainClassFinder {
 		@Override
 		public @Nullable MethodVisitor visitMethod(int access, String name, String desc, String signature,
 				String[] exceptions) {
-			if (isAccess(access, Opcodes.ACC_PUBLIC, Opcodes.ACC_STATIC) && MAIN_METHOD_NAME.equals(name)
-					&& MAIN_METHOD_TYPE.getDescriptor().equals(desc)) {
-				this.mainMethodFound = true;
+			if (hasRequiredAccess(access) && MAIN_METHOD_NAME.equals(name)) {
+				if (MAIN_METHOD_TYPE.getDescriptor().equals(desc)
+						|| (this.java25OrLater && PARAMETERLESS_MAIN_METHOD_TYPE.getDescriptor().equals(desc))) {
+					this.mainMethodFound = true;
+				}
 			}
 			return null;
+		}
+
+		private boolean hasRequiredAccess(int access) {
+			if (this.java25OrLater) {
+				return !isAccess(access, Opcodes.ACC_PRIVATE) && isAccess(access, Opcodes.ACC_STATIC);
+			}
+			else {
+				return isAccess(access, Opcodes.ACC_PUBLIC, Opcodes.ACC_STATIC);
+			}
 		}
 
 		private boolean isAccess(int access, int... requiredOpsCodes) {

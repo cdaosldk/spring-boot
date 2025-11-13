@@ -23,6 +23,9 @@ description = "Spring Boot HATEOAS smoke test"
 dependencies {
 	implementation(project(":starter:spring-boot-starter-hateoas"))
 
-	testImplementation(project(":starter:spring-boot-starter-restclient"))
-	testImplementation(project(":starter:spring-boot-starter-test"))
+	testImplementation(project(":starter:spring-boot-starter-hateoas-test"))
+}
+
+tasks.named("compileTestJava") {
+	options.nullability.checking = "tests"
 }

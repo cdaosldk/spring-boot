@@ -41,20 +41,19 @@ import org.springframework.boot.actuate.endpoint.EndpointId;
 import org.springframework.boot.actuate.endpoint.ExposableEndpoint;
 import org.springframework.boot.actuate.endpoint.OperationResponseBody;
 import org.springframework.boot.actuate.endpoint.annotation.Endpoint;
-import org.springframework.boot.actuate.endpoint.jackson.EndpointObjectMapper;
 import org.springframework.boot.actuate.endpoint.web.EndpointLinksResolver;
 import org.springframework.boot.actuate.endpoint.web.EndpointMapping;
 import org.springframework.boot.actuate.endpoint.web.EndpointMediaTypes;
 import org.springframework.boot.actuate.endpoint.web.ExposableWebEndpoint;
 import org.springframework.boot.actuate.endpoint.web.WebEndpointsSupplier;
 import org.springframework.boot.actuate.endpoint.web.WebServerNamespace;
-import org.springframework.boot.actuate.health.HealthEndpoint;
-import org.springframework.boot.actuate.health.HealthEndpointGroups;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication.Type;
+import org.springframework.boot.health.actuate.endpoint.HealthEndpoint;
+import org.springframework.boot.health.actuate.endpoint.HealthEndpointGroups;
 import org.springframework.boot.jersey.actuate.endpoint.web.JerseyEndpointResourceFactory;
 import org.springframework.boot.jersey.actuate.endpoint.web.JerseyHealthEndpointAdditionalPathResourceFactory;
 import org.springframework.boot.jersey.autoconfigure.ResourceConfigCustomizer;
@@ -109,10 +108,12 @@ class JerseyWebEndpointManagementContextConfiguration {
 	}
 
 	@Bean
-	@ConditionalOnBean(EndpointObjectMapper.class)
-	ResourceConfigCustomizer endpointObjectMapperResourceConfigCustomizer(EndpointObjectMapper endpointObjectMapper) {
-		return (config) -> config.register(new EndpointObjectMapperContextResolver(endpointObjectMapper),
-				ContextResolver.class);
+	@ConditionalOnBean(org.springframework.boot.actuate.endpoint.jackson.EndpointJackson2ObjectMapper.class)
+	@SuppressWarnings("removal")
+	ResourceConfigCustomizer endpointJackson2ObjectMapperResourceConfigCustomizer(
+			org.springframework.boot.actuate.endpoint.jackson.EndpointJackson2ObjectMapper endpointJackson2ObjectMapper) {
+		return (config) -> config.register(
+				new EndpointJackson2ObjectMapperContextResolver(endpointJackson2ObjectMapper), ContextResolver.class);
 	}
 
 	private boolean shouldRegisterLinksMapping(WebEndpointProperties properties, Environment environment,
@@ -219,23 +220,20 @@ class JerseyWebEndpointManagementContextConfiguration {
 	 * {@link ContextResolver} used to obtain the {@link ObjectMapper} that should be used
 	 * for {@link OperationResponseBody} instances.
 	 */
+	@SuppressWarnings("removal")
 	@Priority(Priorities.USER - 100)
-	private static final class EndpointObjectMapperContextResolver implements ContextResolver<ObjectMapper> {
+	private static final class EndpointJackson2ObjectMapperContextResolver implements ContextResolver<ObjectMapper> {
 
-		private final EndpointObjectMapper endpointObjectMapper;
+		private final org.springframework.boot.actuate.endpoint.jackson.EndpointJackson2ObjectMapper mapper;
 
-		private EndpointObjectMapperContextResolver(EndpointObjectMapper endpointObjectMapper) {
-			this.endpointObjectMapper = endpointObjectMapper;
+		private EndpointJackson2ObjectMapperContextResolver(
+				org.springframework.boot.actuate.endpoint.jackson.EndpointJackson2ObjectMapper mapper) {
+			this.mapper = mapper;
 		}
 
 		@Override
 		public @Nullable ObjectMapper getContext(Class<?> type) {
-			for (Class<?> supportedType : this.endpointObjectMapper.getSupportedTypes()) {
-				if (supportedType.isAssignableFrom(type)) {
-					return this.endpointObjectMapper.get();
-				}
-			}
-			return null;
+			return OperationResponseBody.class.isAssignableFrom(type) ? this.mapper.get() : null;
 		}
 
 	}

@@ -19,6 +19,8 @@ package org.springframework.boot.mongodb.autoconfigure;
 import org.bson.UuidRepresentation;
 import org.junit.jupiter.api.Test;
 
+import org.springframework.boot.autoconfigure.AutoConfigurations;
+import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.data.mongodb.config.MongoConfigurationSupport;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -33,8 +35,18 @@ class MongoPropertiesTests {
 	@Test
 	void defaultUUidRepresentationIsAlignedWithSpringData() {
 		UuidRepresentation springDataDefault = springDataDefaultUuidRepresentation();
-		UuidRepresentation springBootDefault = new MongoProperties().getUuidRepresentation();
+		UuidRepresentation springBootDefault = new MongoProperties().getRepresentation().getUuid();
 		assertThat(springBootDefault).isEqualTo(springDataDefault);
+	}
+
+	@Test
+	void canBindCharArrayPassword() {
+		new ApplicationContextRunner().withConfiguration(AutoConfigurations.of(MongoAutoConfiguration.class))
+			.withPropertyValues("spring.mongodb.password:word")
+			.run((context) -> {
+				MongoProperties properties = context.getBean(MongoProperties.class);
+				assertThat(properties.getPassword()).isEqualTo("word".toCharArray());
+			});
 	}
 
 	private UuidRepresentation springDataDefaultUuidRepresentation() {

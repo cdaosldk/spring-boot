@@ -58,10 +58,15 @@ import org.springframework.beans.factory.support.DefaultListableBeanFactory;
 import org.springframework.beans.factory.support.RootBeanDefinition;
 import org.springframework.beans.factory.xml.XmlBeanDefinitionReader;
 import org.springframework.boot.Banner.Mode;
+import org.springframework.boot.bootstrap.BootstrapRegistry;
+import org.springframework.boot.bootstrap.BootstrapRegistryInitializer;
+import org.springframework.boot.bootstrap.DefaultBootstrapContext;
 import org.springframework.boot.context.properties.bind.Bindable;
 import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.boot.context.properties.source.ConfigurationPropertySources;
 import org.springframework.boot.convert.ApplicationConversionService;
+import org.springframework.boot.env.DefaultPropertiesPropertySource;
+import org.springframework.boot.system.JavaVersion;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextInitializer;
 import org.springframework.context.ApplicationListener;
@@ -414,6 +419,9 @@ public class SpringApplication {
 	}
 
 	private void addAotGeneratedInitializerIfNecessary(List<ApplicationContextInitializer<?>> initializers) {
+		if (NativeDetector.inNativeImage()) {
+			checkNativeImageVersion();
+		}
 		if (AotDetector.useGeneratedArtifacts()) {
 			List<ApplicationContextInitializer<?>> aotInitializers = new ArrayList<>(
 					initializers.stream().filter(AotApplicationContextInitializer.class::isInstance).toList());
@@ -427,6 +435,15 @@ public class SpringApplication {
 			}
 			initializers.removeAll(aotInitializers);
 			initializers.addAll(0, aotInitializers);
+		}
+	}
+
+	private void checkNativeImageVersion() {
+		JavaVersion minRequiredJavaVersion = JavaVersion.TWENTY_FIVE;
+		if (JavaVersion.getJavaVersion().isOlderThan(minRequiredJavaVersion)) {
+			throw new NativeImageRequirementsNotMetException(
+					"Native Image requirements not met, please upgrade it. Native Image must support at least Java %s"
+						.formatted(minRequiredJavaVersion));
 		}
 	}
 
@@ -1637,6 +1654,21 @@ public class SpringApplication {
 		 */
 		public @Nullable ConfigurableApplicationContext getApplicationContext() {
 			return this.applicationContext;
+		}
+
+	}
+
+	/**
+	 * Exception which is thrown if GraalVM's native-image requirements aren't met.
+	 */
+	static final class NativeImageRequirementsNotMetException extends RuntimeException {
+
+		/**
+		 * Creates a new {@link NativeImageRequirementsNotMetException} instance.
+		 * @param message the message
+		 */
+		NativeImageRequirementsNotMetException(String message) {
+			super(message);
 		}
 
 	}

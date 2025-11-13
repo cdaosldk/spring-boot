@@ -15,7 +15,7 @@
  */
 
 /**
- * Common support code for HTTP Service Clients.
+ * Auto-configuration support classes for HTTP Service Clients.
  */
 @NullMarked
 package org.springframework.boot.http.client.autoconfigure.service;

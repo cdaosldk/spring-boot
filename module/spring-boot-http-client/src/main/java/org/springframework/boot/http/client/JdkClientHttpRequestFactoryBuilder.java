@@ -21,6 +21,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.Executor;
 import java.util.function.Consumer;
+import java.util.function.UnaryOperator;
 
 import org.jspecify.annotations.Nullable;
 
@@ -65,8 +66,8 @@ public final class JdkClientHttpRequestFactoryBuilder
 	}
 
 	/**
-	 * Return a new {@link JdkClientHttpRequestFactoryBuilder} uses the given executor
-	 * with the underlying {@link java.net.http.HttpClient.Builder}.
+	 * Return a new {@link JdkClientHttpRequestFactoryBuilder} that uses the given
+	 * executor with the underlying {@link java.net.http.HttpClient.Builder}.
 	 * @param executor the executor to use
 	 * @return a new {@link JdkClientHttpRequestFactoryBuilder} instance
 	 * @since 4.0.0
@@ -88,11 +89,22 @@ public final class JdkClientHttpRequestFactoryBuilder
 				this.httpClientBuilder.withCustomizer(httpClientCustomizer));
 	}
 
+	/**
+	 * Return a new {@link JdkClientHttpRequestFactoryBuilder} that applies the given
+	 * customizer. This can be useful for applying pre-packaged customizations.
+	 * @param customizer the customizer to apply
+	 * @return a new {@link JdkClientHttpRequestFactoryBuilder}
+	 * @since 4.0.0
+	 */
+	public JdkClientHttpRequestFactoryBuilder with(UnaryOperator<JdkClientHttpRequestFactoryBuilder> customizer) {
+		return customizer.apply(this);
+	}
+
 	@Override
-	protected JdkClientHttpRequestFactory createClientHttpRequestFactory(ClientHttpRequestFactorySettings settings) {
-		HttpClient httpClient = this.httpClientBuilder.build(asHttpClientSettings(settings.withReadTimeout(null)));
+	protected JdkClientHttpRequestFactory createClientHttpRequestFactory(HttpClientSettings settings) {
+		HttpClient httpClient = this.httpClientBuilder.build(settings.withReadTimeout(null));
 		JdkClientHttpRequestFactory requestFactory = new JdkClientHttpRequestFactory(httpClient);
-		PropertyMapper map = PropertyMapper.get().alwaysApplyingWhenNonNull();
+		PropertyMapper map = PropertyMapper.get();
 		map.from(settings::readTimeout).to(requestFactory::setReadTimeout);
 		return requestFactory;
 	}
