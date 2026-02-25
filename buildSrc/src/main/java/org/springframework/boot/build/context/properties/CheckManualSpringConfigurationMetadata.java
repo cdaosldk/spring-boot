@@ -64,8 +64,10 @@ public abstract class CheckManualSpringConfigurationMetadata extends DefaultTask
 		ConfigurationPropertiesAnalyzer analyzer = new ConfigurationPropertiesAnalyzer(
 				List.of(getMetadataLocation().get()));
 		Report report = new Report(this.projectDir);
-		analyzer.analyzeSort(report);
+		analyzer.analyzeOrder(report);
+		analyzer.analyzeDuplicates(report);
 		analyzer.analyzePropertyDescription(report, getExclusions().get());
+		analyzer.analyzeDeprecationSince(report);
 		File reportFile = getReportLocation().get().getAsFile();
 		report.write(reportFile);
 		if (report.hasProblems()) {

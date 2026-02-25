@@ -39,6 +39,7 @@ import io.micrometer.observation.Observation;
 import io.micrometer.observation.Observation.Scope;
 import io.micrometer.observation.ObservationRegistry;
 import io.micrometer.tracing.brave.bridge.BraveBaggageManager;
+import io.micrometer.tracing.brave.bridge.BravePropagator;
 import io.micrometer.tracing.brave.bridge.BraveSpanCustomizer;
 import io.micrometer.tracing.brave.bridge.BraveTracer;
 import io.micrometer.tracing.brave.bridge.CompositeSpanHandler;
@@ -46,7 +47,7 @@ import io.micrometer.tracing.brave.bridge.W3CPropagation;
 import io.micrometer.tracing.exporter.SpanExportingPredicate;
 import io.micrometer.tracing.exporter.SpanFilter;
 import io.micrometer.tracing.exporter.SpanReporter;
-import org.assertj.core.api.Assertions;
+import io.micrometer.tracing.propagation.Propagator;
 import org.assertj.core.api.InstanceOfAssertFactories;
 import org.junit.jupiter.api.Test;
 
@@ -63,6 +64,7 @@ import org.springframework.core.annotation.Order;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatException;
+import static org.assertj.core.api.Assertions.fail;
 import static org.mockito.Mockito.mock;
 
 /**
@@ -124,6 +126,15 @@ class BraveAutoConfigurationTests {
 	@Test
 	void shouldSupplyMicrometerBeans() {
 		this.contextRunner.run((context) -> assertThat(context).hasSingleBean(BraveTracer.class));
+	}
+
+	@Test
+	void shouldNotSupplyBravePropagatorWhenPropagatorBeanIsPresent() {
+		this.contextRunner.withUserConfiguration(PropagatorConfiguration.class).run((context) -> {
+			assertThat(context).hasSingleBean(Propagator.class);
+			assertThat(context).hasBean("customPropagator");
+			assertThat(context).doesNotHaveBean(BravePropagator.class);
+		});
 	}
 
 	@Test
@@ -401,7 +412,7 @@ class BraveAutoConfigurationTests {
 		if (factory instanceof CompositePropagationFactory compositePropagationFactory) {
 			return compositePropagationFactory.getInjectors().toList();
 		}
-		Assertions.fail("Expected CompositePropagationFactory, found %s".formatted(factory.getClass()));
+		fail("Expected CompositePropagationFactory, found %s".formatted(factory.getClass()));
 		throw new AssertionError("Unreachable");
 	}
 
@@ -531,6 +542,16 @@ class BraveAutoConfigurationTests {
 		@Bean
 		io.micrometer.tracing.SpanCustomizer customMicrometerSpanCustomizer() {
 			return mock(io.micrometer.tracing.SpanCustomizer.class);
+		}
+
+	}
+
+	@Configuration(proxyBeanMethods = false)
+	static class PropagatorConfiguration {
+
+		@Bean
+		Propagator customPropagator() {
+			return mock(Propagator.class);
 		}
 
 	}

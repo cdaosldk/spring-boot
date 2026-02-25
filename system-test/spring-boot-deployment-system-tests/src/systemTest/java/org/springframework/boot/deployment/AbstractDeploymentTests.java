@@ -26,6 +26,7 @@ import org.apache.hc.client5.http.impl.classic.HttpClients;
 import org.apache.hc.core5.util.TimeValue;
 import org.awaitility.Awaitility;
 import org.awaitility.core.ConditionTimeoutException;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.images.builder.ImageFromDockerfile;
@@ -96,7 +97,7 @@ abstract class AbstractDeploymentTests {
 
 		private void test(Consumer<TestRestTemplate> consumer) {
 			TestRestTemplate rest = new TestRestTemplate(new RestTemplateBuilder()
-				.rootUri("http://" + this.container.getHost() + ":" + this.container.getMappedPort(this.port)
+				.baseUri("http://" + this.container.getHost() + ":" + this.container.getMappedPort(this.port)
 						+ "/spring-boot")
 				.requestFactory(() -> new HttpComponentsClientHttpRequestFactory(HttpClients.custom()
 					.setRetryStrategy(new DefaultHttpRequestRetryStrategy(10, TimeValue.of(1, TimeUnit.SECONDS)))
@@ -128,7 +129,7 @@ abstract class AbstractDeploymentTests {
 		}
 
 		WarDeploymentContainer(String baseImage, String deploymentLocation, int port,
-				Consumer<DockerfileBuilder> dockerfileCustomizer) {
+				@Nullable Consumer<DockerfileBuilder> dockerfileCustomizer) {
 			super(new ImageFromDockerfile().withFileFromFile("spring-boot.war", findWarToDeploy())
 				.withDockerfileFromBuilder((builder) -> {
 					builder.from(baseImage).add("spring-boot.war", deploymentLocation + "/spring-boot.war");

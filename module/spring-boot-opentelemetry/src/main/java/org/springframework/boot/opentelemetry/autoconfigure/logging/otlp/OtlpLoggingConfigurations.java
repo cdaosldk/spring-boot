@@ -25,11 +25,11 @@ import io.opentelemetry.exporter.otlp.logs.OtlpGrpcLogRecordExporter;
 import io.opentelemetry.exporter.otlp.logs.OtlpGrpcLogRecordExporterBuilder;
 
 import org.springframework.beans.factory.ObjectProvider;
-import org.springframework.boot.actuate.autoconfigure.logging.ConditionalOnEnabledLoggingExport;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.opentelemetry.autoconfigure.logging.ConditionalOnEnabledLoggingExport;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.util.Assert;
@@ -46,7 +46,7 @@ final class OtlpLoggingConfigurations {
 	static class ConnectionDetails {
 
 		@Bean
-		@ConditionalOnMissingBean
+		@ConditionalOnMissingBean(OtlpLoggingConnectionDetails.class)
 		@ConditionalOnProperty("management.opentelemetry.logging.export.otlp.endpoint")
 		PropertiesOtlpLoggingConnectionDetails openTelemetryLoggingConnectionDetails(OtlpLoggingProperties properties) {
 			return new PropertiesOtlpLoggingConnectionDetails(properties);
@@ -88,7 +88,8 @@ final class OtlpLoggingConfigurations {
 		@ConditionalOnProperty(name = "management.opentelemetry.logging.export.otlp.transport", havingValue = "http",
 				matchIfMissing = true)
 		OtlpHttpLogRecordExporter otlpHttpLogRecordExporter(OtlpLoggingProperties properties,
-				OtlpLoggingConnectionDetails connectionDetails, ObjectProvider<MeterProvider> meterProvider) {
+				OtlpLoggingConnectionDetails connectionDetails, ObjectProvider<MeterProvider> meterProvider,
+				ObjectProvider<OtlpHttpLogRecordExporterBuilderCustomizer> customizers) {
 			OtlpHttpLogRecordExporterBuilder builder = OtlpHttpLogRecordExporter.builder()
 				.setEndpoint(connectionDetails.getUrl(Transport.HTTP))
 				.setTimeout(properties.getTimeout())
@@ -96,13 +97,15 @@ final class OtlpLoggingConfigurations {
 				.setCompression(properties.getCompression().name().toLowerCase(Locale.US));
 			properties.getHeaders().forEach(builder::addHeader);
 			meterProvider.ifAvailable(builder::setMeterProvider);
+			customizers.orderedStream().forEach((customizer) -> customizer.customize(builder));
 			return builder.build();
 		}
 
 		@Bean
 		@ConditionalOnProperty(name = "management.opentelemetry.logging.export.otlp.transport", havingValue = "grpc")
 		OtlpGrpcLogRecordExporter otlpGrpcLogRecordExporter(OtlpLoggingProperties properties,
-				OtlpLoggingConnectionDetails connectionDetails, ObjectProvider<MeterProvider> meterProvider) {
+				OtlpLoggingConnectionDetails connectionDetails, ObjectProvider<MeterProvider> meterProvider,
+				ObjectProvider<OtlpGrpcLogRecordExporterBuilderCustomizer> customizers) {
 			OtlpGrpcLogRecordExporterBuilder builder = OtlpGrpcLogRecordExporter.builder()
 				.setEndpoint(connectionDetails.getUrl(Transport.GRPC))
 				.setTimeout(properties.getTimeout())
@@ -110,6 +113,7 @@ final class OtlpLoggingConfigurations {
 				.setCompression(properties.getCompression().name().toLowerCase(Locale.US));
 			properties.getHeaders().forEach(builder::addHeader);
 			meterProvider.ifAvailable(builder::setMeterProvider);
+			customizers.orderedStream().forEach((customizer) -> customizer.customize(builder));
 			return builder.build();
 		}
 

@@ -46,7 +46,7 @@ class ConfigurationPropertiesAnalyzerTests {
 	}
 
 	@Test
-	void analyzeSortWithAlphabeticalOrder(@TempDir File tempDir) throws IOException {
+	void analyzeOrderWithAlphabeticalOrder(@TempDir File tempDir) throws IOException {
 		File metadata = new File(tempDir, "metadata.json");
 		Files.writeString(metadata.toPath(), """
 				{ "properties": [
@@ -55,14 +55,14 @@ class ConfigurationPropertiesAnalyzerTests {
 				}""");
 		Report report = new Report(tempDir);
 		ConfigurationPropertiesAnalyzer analyzer = new ConfigurationPropertiesAnalyzer(List.of(metadata));
-		analyzer.analyzeSort(report);
+		analyzer.analyzeOrder(report);
 		assertThat(report.hasProblems()).isFalse();
 		assertThat(report.getAnalyses(metadata)).singleElement()
 			.satisfies(((analysis) -> assertThat(analysis.getItems()).isEmpty()));
 	}
 
 	@Test
-	void analyzeSortWithViolations(@TempDir File tempDir) throws IOException {
+	void analyzeOrderWithViolations(@TempDir File tempDir) throws IOException {
 		File metadata = new File(tempDir, "metadata.json");
 		Files.writeString(metadata.toPath(), """
 				{ "properties": [
@@ -71,12 +71,45 @@ class ConfigurationPropertiesAnalyzerTests {
 				}""");
 		Report report = new Report(tempDir);
 		ConfigurationPropertiesAnalyzer analyzer = new ConfigurationPropertiesAnalyzer(List.of(metadata));
-		analyzer.analyzeSort(report);
+		analyzer.analyzeOrder(report);
 		assertThat(report.hasProblems()).isTrue();
 		assertThat(report.getAnalyses(metadata)).singleElement()
 			.satisfies((analysis) -> assertThat(analysis.getItems()).containsExactly(
 					"Wrong order at $.properties[0].name - expected 'abc' but found 'def'",
 					"Wrong order at $.properties[1].name - expected 'def' but found 'abc'"));
+	}
+
+	@Test
+	void analyzeDuplicatesWithNoDuplicates(@TempDir File tempDir) throws IOException {
+		File metadata = new File(tempDir, "metadata.json");
+		Files.writeString(metadata.toPath(), """
+				{ "properties": [
+					{ "name": "abc"}, {"name": "def"}, {"name": "xyz"}
+				  ]
+				}""");
+		Report report = new Report(tempDir);
+		ConfigurationPropertiesAnalyzer analyzer = new ConfigurationPropertiesAnalyzer(List.of(metadata));
+		analyzer.analyzeOrder(report);
+		assertThat(report.hasProblems()).isFalse();
+		assertThat(report.getAnalyses(metadata)).singleElement()
+			.satisfies(((analysis) -> assertThat(analysis.getItems()).isEmpty()));
+	}
+
+	@Test
+	void analyzeDuplicatesWithDuplicate(@TempDir File tempDir) throws IOException {
+		File metadata = new File(tempDir, "metadata.json");
+		Files.writeString(metadata.toPath(), """
+				{ "properties": [
+					{ "name": "abc"}, {"name": "abc"}, {"name": "def"}
+				  ]
+				}""");
+		Report report = new Report(tempDir);
+		ConfigurationPropertiesAnalyzer analyzer = new ConfigurationPropertiesAnalyzer(List.of(metadata));
+		analyzer.analyzeDuplicates(report);
+		assertThat(report.hasProblems()).isTrue();
+		assertThat(report.getAnalyses(metadata)).singleElement()
+			.satisfies((analysis) -> assertThat(analysis.getItems())
+				.containsExactly("Duplicate name 'abc' at $.properties[1]"));
 	}
 
 	@Test
@@ -113,6 +146,32 @@ class ConfigurationPropertiesAnalyzerTests {
 		assertThat(report.hasProblems()).isTrue();
 		assertThat(report.getAnalyses(metadata)).singleElement()
 			.satisfies(((analysis) -> assertThat(analysis.getItems()).containsExactly("def")));
+	}
+
+	@Test
+	void analyzeDeprecatedPropertyWithMissingSince(@TempDir File tempDir) throws IOException {
+		File metadata = new File(tempDir, "metadata.json");
+		Files.writeString(metadata.toPath(), """
+				{ "properties": [
+				  {
+				    "name": "abc",
+				    "description": "This is abc.",
+				    "deprecation": { "reason": "abc reason", "since": "3.0.0" }
+				  },
+				  { "name": "def", "description": "This is def." },
+				  {
+				    "name": "xyz",
+				    "description": "This is xyz.",
+				    "deprecation": { "reason": "xyz reason" }
+				  }
+				  ]
+				}""");
+		Report report = new Report(tempDir);
+		ConfigurationPropertiesAnalyzer analyzer = new ConfigurationPropertiesAnalyzer(List.of(metadata));
+		analyzer.analyzeDeprecationSince(report);
+		assertThat(report.hasProblems()).isTrue();
+		assertThat(report.getAnalyses(metadata)).singleElement()
+			.satisfies(((analysis) -> assertThat(analysis.getItems()).containsExactly("xyz")));
 	}
 
 	@Test

@@ -12,7 +12,7 @@ include-code::MyCustomObservation[]
 NOTE: Low cardinality tags will be added to metrics and traces, while high cardinality tags will only be added to traces.
 
 Beans of type javadoc:io.micrometer.observation.ObservationPredicate[], javadoc:io.micrometer.observation.GlobalObservationConvention[], javadoc:io.micrometer.observation.ObservationFilter[] and javadoc:io.micrometer.observation.ObservationHandler[] will be automatically registered on the javadoc:io.micrometer.observation.ObservationRegistry[].
-You can additionally register any number of javadoc:org.springframework.boot.actuate.autoconfigure.observation.ObservationRegistryCustomizer[] beans to further configure the registry.
+You can additionally register any number of javadoc:org.springframework.boot.micrometer.observation.autoconfigure.ObservationRegistryCustomizer[] beans to further configure the registry.
 
 TIP: Observability for JDBC can be configured using a separate project.
 The https://github.com/jdbc-observations/datasource-micrometer[Datasource Micrometer project] provides a Spring Boot starter which automatically creates observations when JDBC operations are invoked.
@@ -29,8 +29,9 @@ Observability support relies on the https://github.com/micrometer-metrics/contex
 By default, javadoc:java.lang.ThreadLocal[] values are not automatically reinstated in reactive operators.
 This behavior is controlled with the configprop:spring.reactor.context-propagation[] property, which can be set to `auto` to enable automatic propagation.
 
-If you're working with javadoc:org.springframework.scheduling.annotation.Async[format=annotation] methods or use an javadoc:org.springframework.core.task.AsyncTaskExecutor[], you have to register the javadoc:org.springframework.core.task.support.ContextPropagatingTaskDecorator[] on the executor, otherwise the observability context is lost when switching threads.
-This can be done using this configuration:
+If you're working with javadoc:org.springframework.scheduling.annotation.Async[format=annotation] methods and the javadoc:org.springframework.core.task.AsyncTaskExecutor[] is auto-configured, you have to opt-in for context propagation using the configprop:spring.task.execution.propagate-context[] property.
+
+If you are configuring the javadoc:org.springframework.core.task.AsyncTaskExecutor[] yourself, then you need to register a javadoc:org.springframework.core.task.support.ContextPropagatingTaskDecorator[] bean, as shown in the following example:
 
 include-code::ContextPropagationConfiguration[]
 
@@ -90,7 +91,8 @@ The preceding example will prevent all observations whose name contains "denied"
 [[actuator.observability.annotations]]
 == Micrometer Observation Annotations support
 
-To enable scanning of observability annotations like javadoc:io.micrometer.observation.annotation.Observed[format=annotation], javadoc:io.micrometer.core.annotation.Timed[format=annotation], javadoc:io.micrometer.core.annotation.Counted[format=annotation], javadoc:io.micrometer.core.aop.MeterTag[format=annotation] and javadoc:io.micrometer.tracing.annotation.NewSpan[format=annotation], you need to set the configprop:management.observations.annotations.enabled[] property to `true`.
+To enable scanning of observability annotations like javadoc:io.micrometer.observation.annotation.Observed[format=annotation], javadoc:io.micrometer.core.annotation.Timed[format=annotation], javadoc:io.micrometer.core.annotation.Counted[format=annotation], javadoc:io.micrometer.core.aop.MeterTag[format=annotation] and javadoc:io.micrometer.tracing.annotation.NewSpan[format=annotation], set the configprop:management.observations.annotations.enabled[] property to `true`.
+A dependency on `org.aspectj:aspectjweaver`, which is part of `spring-boot-starter-aspectj`, is also required.
 This feature is supported by Micrometer directly.
 Please refer to the {url-micrometer-docs-concepts}/timers.html#_the_timed_annotation[Micrometer], {url-micrometer-docs-observation}/components.html#micrometer-observation-annotations[Micrometer Observation] and {url-micrometer-tracing-docs}/api.html#_aspect_oriented_programming[Micrometer Tracing] reference docs.
 
@@ -159,6 +161,10 @@ include-code::AutoConfiguredOpenTelemetrySdkConfiguration[]
 
 The javadoc:org.springframework.boot.opentelemetry.autoconfigure.logging.OpenTelemetryLoggingAutoConfiguration[] configures OpenTelemetry's javadoc:io.opentelemetry.sdk.logs.SdkLoggerProvider[].
 Exporting logs via OTLP is supported through the javadoc:org.springframework.boot.opentelemetry.autoconfigure.logging.otlp.OtlpLoggingAutoConfiguration[], which enables OTLP log exporting over HTTP or gRPC.
+
+NOTE: If you need to apply advanced customizations to OTLP log record exporters, consider registering javadoc:org.springframework.boot.opentelemetry.autoconfigure.logging.otlp.OtlpHttpLogRecordExporterBuilderCustomizer[] or javadoc:org.springframework.boot.opentelemetry.autoconfigure.logging.otlp.OtlpGrpcLogRecordExporterBuilderCustomizer[] beans.
+These will be invoked before the creation of the javadoc:io.opentelemetry.exporter.otlp.http.logs.OtlpHttpLogRecordExporter[] or javadoc:io.opentelemetry.exporter.otlp.logs.OtlpGrpcLogRecordExporter[].
+The customizers take precedence over anything applied by the auto-configuration.
 
 However, while there is a `SdkLoggerProvider` bean, Spring Boot doesn't support bridging logs to this bean out of the box.
 This can be done with 3rd-party log bridges, as described in the xref:reference:actuator/loggers.adoc#actuator.loggers.opentelemetry[Logging with OpenTelemetry] section.

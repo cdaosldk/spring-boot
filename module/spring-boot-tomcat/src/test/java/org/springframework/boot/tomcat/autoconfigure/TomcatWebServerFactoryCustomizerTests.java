@@ -34,6 +34,7 @@ import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import org.springframework.boot.autoconfigure.web.WebProperties;
 import org.springframework.boot.context.properties.bind.Bindable;
 import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.boot.context.properties.source.ConfigurationPropertySources;
@@ -74,13 +75,15 @@ class TomcatWebServerFactoryCustomizerTests {
 
 	private final TomcatServerProperties tomcatProperties = new TomcatServerProperties();
 
+	private final WebProperties webProperties = new WebProperties();
+
 	private TomcatWebServerFactoryCustomizer customizer;
 
 	@BeforeEach
 	void setup() {
 		ConfigurationPropertySources.attach(this.environment);
 		this.customizer = new TomcatWebServerFactoryCustomizer(this.environment, this.serverProperties,
-				this.tomcatProperties);
+				this.tomcatProperties, this.webProperties);
 	}
 
 	@Test
@@ -187,7 +190,7 @@ class TomcatWebServerFactoryCustomizerTests {
 	@Test
 	void defaultMaxPartCount() {
 		customizeAndRunServer(
-				(server) -> assertThat(server.getTomcat().getConnector().getMaxPartCount()).isEqualTo(10));
+				(server) -> assertThat(server.getTomcat().getConnector().getMaxPartCount()).isEqualTo(50));
 	}
 
 	@Test

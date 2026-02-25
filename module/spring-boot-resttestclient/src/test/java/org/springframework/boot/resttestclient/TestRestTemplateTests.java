@@ -114,10 +114,18 @@ class TestRestTemplateTests {
 	}
 
 	@Test
-	void getRootUriRootUriSetViaRestTemplateBuilder() {
-		String rootUri = "https://example.com";
-		RestTemplateBuilder delegate = new RestTemplateBuilder().rootUri(rootUri);
-		assertThat(new TestRestTemplate(delegate).getRootUri()).isEqualTo(rootUri);
+	void getBaseUriRootUriSetViaRestTemplateBuilder() {
+		String baseUri = "https://example.com";
+		RestTemplateBuilder delegate = new RestTemplateBuilder().baseUri(baseUri);
+		assertThat(new TestRestTemplate(delegate).getRootUri()).isEqualTo(baseUri);
+	}
+
+	@Test
+	void getRootUriRootUriSetViaLocalTestWebServer() {
+		LocalTestWebServer localTestWebServer = LocalTestWebServer.of(Scheme.HTTPS, 7070);
+		RestTemplateBuilder delegate = new RestTemplateBuilder()
+			.uriTemplateHandler(localTestWebServer.uriBuilderFactory());
+		assertThat(new TestRestTemplate(delegate).getRootUri()).isEqualTo("https://localhost:7070");
 	}
 
 	@Test

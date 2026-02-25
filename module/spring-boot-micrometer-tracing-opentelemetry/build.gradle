@@ -29,6 +29,7 @@ dependencies {
 	api(project(":core:spring-boot"))
 	api(project(":module:spring-boot-micrometer-observation"))
 	api(project(":module:spring-boot-micrometer-tracing"))
+	api(project(":module:spring-boot-opentelemetry"))
 	api("io.micrometer:micrometer-tracing") {
 		exclude(group: "aopalliance", module: "aopalliance")
 	}
@@ -48,8 +49,9 @@ dependencies {
 	dockerTestImplementation("org.testcontainers:testcontainers-junit-jupiter")
 
 	testImplementation(project(":core:spring-boot-test"))
+	testImplementation(project(":module:spring-boot-micrometer-tracing-brave"))
 	testImplementation(project(":test-support:spring-boot-test-support"))
-	testImplementation(project(":module:spring-boot-opentelemetry"))
+	testImplementation("io.micrometer:micrometer-tracing-bridge-brave")
 	testImplementation("com.squareup.okhttp3:mockwebserver")
 	testImplementation("io.micrometer:micrometer-registry-prometheus")
 	testImplementation("io.opentelemetry:opentelemetry-exporter-common")
